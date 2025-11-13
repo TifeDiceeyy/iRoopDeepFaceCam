@@ -3,6 +3,11 @@
 # iRoopDeepFaceCam 
 ![iRoopDeepFaceCam-jpg](iRoopDeepFaceCam.jpg)
 
+## Support
+If you find this app useful, consider buying me a coffee!
+
+[![Buy Me A Coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&button_colour=BD5FFF&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00)](https://buymeacoffee.com/ivideogameboss)
+
 Get ready to dive into a whole new world of fun with iRoopDeepFaceCam! This innovative tool, inspired by the original [roop](https://github.com/s0md3v/roop) lets you create face swaps using a live webcam, video, or image file. Want to make it even more exciting? Use an OBS virtual camera to act as your webcam! 
 
 iRoopDeepFaceCam features are groundbreaking that [Deep-Live-Cam](https://github.com/hacksider/Deep-Live-Cam) is now adding them to thier code such as our amazing Mouth Mask feature and more. iRoopDeepFaceCam has changed the world of face swap forever that no other app could do.
@@ -649,3 +654,4 @@ sudo apt-get -y install cuda-toolkit-11-8
 - [vic4key](https://github.com/vic4key) : For supporting/contributing on this project
 - and [all developers](https://github.com/hacksider/Deep-Live-Cam/graphs/contributors) behind libraries used in this project.
 - Foot Note: [This is originally roop-cam, see the full history of the code here.](https://github.com/hacksider/roop-cam) Please be informed that the base author of the code is [s0md3v](https://github.com/s0md3v/roop)
+
