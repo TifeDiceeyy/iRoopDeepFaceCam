@@ -69,6 +69,8 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
     global embedding_weight_size_var,position_size_var,old_embedding_size_var,new_embedding_size_var
     global weight_distribution_size_var,embedding_weight_size_dropdown,weight_distribution_size_dropdown
     global position_size_dropdown, old_embedding_size_dropdown,new_embedding_size_dropdown,camera_var
+    global enhancer_switch 
+    global auto_rotate_var
 
     ctk.deactivate_automatic_dpi_awareness()
     ctk.set_appearance_mode('system')
@@ -131,7 +133,7 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
         modules.globals.rot_range_dropdown_preview.set(size)
 
     # Create rotation range label
-    face_rot_label = ctk.CTkLabel(face_rot_frame, text="Face Rotation Range in Video (+90) (?) (-90) ->", font=("Arial", 16))
+    face_rot_label = ctk.CTkLabel(face_rot_frame, text="Face Rot Range (+90)-(-90) ->", font=("Arial", 16))
     face_rot_label.place(relx=0.02, rely=0.5, relheight=0.5, anchor="w")
 
     # Initialize and create rotation range dropdown
@@ -143,6 +145,48 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
 
     # Store the switch in modules.globals for access from create_preview
     modules.globals.rot_range_dropdown_preview = rot_range_dropdown
+
+    # --- 2. FREQUENCY DROPDOWN ---
+    def update_freq(value):
+        modules.globals.rotation_check_interval = int(value)
+
+    freq_label = ctk.CTkLabel(face_rot_frame, text="Freq:", font=("Arial", 12))
+    freq_label.place(relx=0.62, rely=0.5, anchor="e")
+
+    freq_var = ctk.StringVar(value=str(modules.globals.rotation_check_interval))
+    freq_dropdown = ctk.CTkOptionMenu(face_rot_frame, values=["1", "2", "3", "5", "10", "15", "30", "60"],
+                                      variable=freq_var,
+                                      command=update_freq,
+                                      width=60)
+    freq_dropdown.place(relx=0.75, rely=0.5, anchor="e")
+    # -----------------------------
+
+    # --- NEW AUTO ROTATE SWITCH ---
+    
+    # Shared BooleanVar for Auto Rotate
+    if not hasattr(modules.globals, 'auto_rotate_var'):
+        modules.globals.auto_rotate_var = ctk.BooleanVar(value=modules.globals.auto_rotate_value)
+
+    def toggle_auto_rotate():
+        is_auto = modules.globals.auto_rotate_var.get()
+        modules.globals.auto_rotate_value = is_auto
+        
+        # Sync Main Switch
+        if modules.globals.auto_rotate_switch_main:
+            modules.globals.auto_rotate_switch_main.select() if is_auto else modules.globals.auto_rotate_switch_main.deselect()
+            
+        # Sync Preview Switch
+        if modules.globals.auto_rotate_switch_preview:
+            modules.globals.auto_rotate_switch_preview.select() if is_auto else modules.globals.auto_rotate_switch_preview.deselect()
+
+    auto_rotate_switch = ctk.CTkSwitch(face_rot_frame, text='Auto', 
+                                      variable=modules.globals.auto_rotate_var, 
+                                      command=toggle_auto_rotate, width=50)
+    # Place it to the left of the dropdown (0.98 - 0.2 = 0.78 area)
+    auto_rotate_switch.place(relx=0.55, rely=0.5, anchor="e")
+    
+    modules.globals.auto_rotate_switch_main = auto_rotate_switch
+
 
 
     # Left column of switches
@@ -239,7 +283,7 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
     nsfw_filter_switch.place(relx=0.55, rely=y_start + 9.2*y_increment, relwidth=0.4)
 
     enhancer_value = ctk.BooleanVar(value=modules.globals.fp_ui['face_enhancer'])
-    enhancer_switch = ctk.CTkSwitch(root, text='Face Enhancer', variable=enhancer_value, cursor='hand2',
+    enhancer_switch = ctk.CTkSwitch(root, text='Face Enhancer (Video)', variable=enhancer_value, cursor='hand2',
                                     command=lambda: update_tumbler('face_enhancer', enhancer_value.get()))
     enhancer_switch.place(relx=0.55, rely=y_start + 9.9*y_increment, relwidth=0.4)
 
@@ -686,6 +730,23 @@ def create_preview(parent: ctk.CTkToplevel) -> ctk.CTkToplevel:
     face_rot_label = ctk.CTkLabel(switch_frame, text=" | Rot Range ", font=("Arial", 16))
     face_rot_label.pack(side='left', padx=5, pady=5)
 
+    # --- NEW AUTO ROTATE SWITCH (PREVIEW) ---
+    def toggle_auto_rotate_preview():
+        is_auto = modules.globals.auto_rotate_var.get()
+        modules.globals.auto_rotate_value = is_auto
+        
+        # Sync Main Switch
+        if modules.globals.auto_rotate_switch_main:
+            modules.globals.auto_rotate_switch_main.select() if is_auto else modules.globals.auto_rotate_switch_main.deselect()
+    
+    auto_rotate_switch_prev = ctk.CTkSwitch(switch_frame, text='Auto', 
+                                           variable=modules.globals.auto_rotate_var,
+                                           command=toggle_auto_rotate_preview,
+                                           width=50)
+    auto_rotate_switch_prev.pack(side='left', padx=5, pady=5)
+    
+    modules.globals.auto_rotate_switch_preview = auto_rotate_switch_prev
+
     # Initialize and create rotation range dropdown
     rot_range_dropdown_preview = ctk.CTkOptionMenu(switch_frame, values=["0", "90", "180", "-90"],
                                                    variable=modules.globals.rot_range_var,
@@ -999,8 +1060,18 @@ def webcam_preview():
     if modules.globals.source_path is None:
         return
     global preview_label, PREVIEW, ROOT, camera
-    global first_face_id, second_face_id  # Add these global variables
-    global first_face_embedding, second_face_embedding  # Add these global variables
+    global first_face_id, second_face_id
+    global first_face_embedding, second_face_embedding
+    global enhancer_switch
+
+    # --- FACE ENHANCER LOGIC ---
+    previous_enhancer_state = modules.globals.fp_ui.get('face_enhancer', False)
+    if previous_enhancer_state:
+        enhancer_switch.deselect()
+        update_tumbler('face_enhancer', False)
+    if enhancer_switch:
+        enhancer_switch.configure(state="disabled")
+    # ---------------------------
 
     # Reset face assignments
     first_face_embedding = None
@@ -1008,20 +1079,14 @@ def webcam_preview():
     first_face_id = None
     second_face_id = None
 
-    # Reset face assignments
-    first_face_embedding = None
-    second_face_embedding = None
-    # Reset face assignments
-    first_face_id = None
-    second_face_id = None
-
-    # Set initial size of the preview window
-    PREVIEW_WIDTH = 1030
-    PREVIEW_HEIGHT = 620
+    # Set initial size
+    PREVIEW_WIDTH = 1100
+    PREVIEW_HEIGHT = 670
     camera_index = modules.globals.camera_index
     camera = cv2.VideoCapture(camera_index)
     update_camera_resolution()
-    # Configure the preview window
+    
+    # Configure preview
     PREVIEW.deiconify()
     PREVIEW.geometry(f"{PREVIEW_WIDTH}x{PREVIEW_HEIGHT}")
     preview_label_cam.configure(width=PREVIEW_WIDTH, height=PREVIEW_HEIGHT)
@@ -1032,70 +1097,129 @@ def webcam_preview():
             if hasattr(frame_processor, 'reset_face_tracking'):
                     frame_processor.reset_face_tracking()
 
-    # Initialize source_images as a list to store faces
+    # Initialize source_images
     source_images: List[Face] = []
     if modules.globals.source_path:
         source_image = cv2.imread(modules.globals.source_path)
         faces = get_many_faces(source_image)
         if faces:
-            # sort faces from left to right then slice max 6
-            source_images = sorted(faces, key=lambda face: face.bbox[0])[:10]
+            source_images = sorted(faces, key=lambda face: face.bbox[0])[:20]
     
     if not source_images:
         print('No face found in source image')
+        if enhancer_switch:
+            enhancer_switch.configure(state="normal")
+            if previous_enhancer_state:
+                enhancer_switch.select()
+                update_tumbler('face_enhancer', True)
         return
     else:
-        # Create the new list of values for the dropdown
         num_faces = len(source_images)
-        dropdown_values = ["-1"] + [str(i) for i in range(num_faces)] # Changed from "1"
+        dropdown_values = ["-1"] + [str(i) for i in range(num_faces)]
+        # dropdown2_values = [str(i) for i in range(num_faces)]
         
-        # Update the dropdown with the new values
         modules.globals.face_index_dropdown_preview.configure(values=dropdown_values)
-
-        #set value back to default value
+        # modules.globals.face2_index_dropdown_preview.configure(values=dropdown2_values)
         modules.globals.face_index_var.set("-1")
         modules.globals.face_index_range = -1
 
         for frame_processor in frame_processors:
              if hasattr(frame_processor, 'extract_face_embedding'):
-                # Extract embeddings for all source faces and store them
                 source_embeddings = []
                 for face in source_images:
                      source_embeddings.append(frame_processor.extract_face_embedding(face))
-                # Set to global variable for face_swapper.txt
                 modules.globals.source_face_left_embedding=source_embeddings
-                # print('face found in source image')
 
-    # FPS calculation variables
+    from modules.processors.frame.face_swapper import estimate_head_rotation
+
     frame_count = 0
     start_time = time.time()
     fps = 0
-    frame_processor.frame_auto_rotation=0
+    prev_frame = None
+    
+    rotation_check_counter = 0
+    # ROTATION_CHECK_INTERVAL = 5 
+
     while camera.isOpened():
-        ret, frame = camera.read()
+        ret, current_frame = camera.read()
         if not ret:
             break
-        temp_frame = frame.copy()
-        
+            
         if modules.globals.flip_x:
-            temp_frame = cv2.flip(temp_frame, 1)
+            current_frame = cv2.flip(current_frame, 1)
         if modules.globals.flip_y:
-            temp_frame = cv2.flip(temp_frame, 0)
+            current_frame = cv2.flip(current_frame, 0)
+
+        # --- AUTO ROTATION LOGIC ---
+        if modules.globals.auto_rotate_value and rotation_check_counter % modules.globals.rotation_check_interval == 0:
+            # 1. Try detecting faces on the raw frame (Handles 0, 90, -90)
+            rotation_check_faces = get_many_faces(current_frame)
+            
+            new_rot = 0
+            found_rotation = False
+
+            if rotation_check_faces:
+                # Found face in normal orientation
+                main_face = max(rotation_check_faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]))
+                angle = estimate_head_rotation(main_face)
+                
+                # Check Upside Down angle (rarely detected here, but possible)
+                # if angle > 150 or angle < -150:
+                #     new_rot = 180
+                # el
+                if angle > 60:
+                    new_rot = -90 
+                elif angle < -60:
+                    new_rot = 90
+                
+                found_rotation = True
+            
+            # 2. If no face found, check 180 degree rotation
+            # The detector usually fails on upside down faces, so we manually flip and check.
+            if not found_rotation:
+                frame_180 = cv2.rotate(current_frame, cv2.ROTATE_180)
+                faces_180 = get_many_faces(frame_180)
+                
+                if faces_180:
+                    # If we found a face here, it means the input was upside down
+                    new_rot = 180
+                    found_rotation = True
+
+            # Apply the rotation if a valid face/orientation was found
+            if found_rotation:
+                if modules.globals.face_rot_range != new_rot:
+                    modules.globals.face_rot_range = new_rot
+                    if modules.globals.rot_range_var:
+                        modules.globals.rot_range_var.set(str(new_rot))
+                    if modules.globals.rot_range_dropdown_preview:
+                         modules.globals.rot_range_dropdown_preview.set(str(new_rot))
         
+        rotation_check_counter += 1
+        # ---------------------------
+
+        if prev_frame is None:
+            prev_frame = current_frame.copy()
+            continue
+
+        processed_frame = prev_frame.copy()
+
         for frame_processor in frame_processors:
-            temp_frame = frame_processor.process_frame(source_images, temp_frame)
+            processed_frame = frame_processor.process_frame(source_images, processed_frame)
         
-        # # Calculate and display FPS
+        prev_frame = current_frame.copy()
+
+        # FPS
         frame_count += 1
         current_time = time.time()
         elapsed_time = current_time - start_time
-        if elapsed_time > 1:  # Update FPS every second
+        if elapsed_time > 1:
             fps = frame_count / elapsed_time
             frame_count = 0
             start_time = current_time
         
-        #cv2.putText(temp_frame, f"FPS: {fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         fps_label.configure(text=f'FPS: {fps:.2f}')
+        
+        # UI Updates
         target_face1_value.configure(text=f': {modules.globals.target_face1_score:.2f}')
         target_face2_value.configure(text=f': {modules.globals.target_face2_score:.2f}')
         target_face3_value.configure(text=f': {modules.globals.target_face3_score:.2f}')
@@ -1106,20 +1230,29 @@ def webcam_preview():
         target_face8_value.configure(text=f': {modules.globals.target_face8_score:.2f}')
         target_face9_value.configure(text=f': {modules.globals.target_face9_score:.2f}')
         target_face10_value.configure(text=f': {modules.globals.target_face10_score:.2f}')
-        # Get current preview window size
+
         current_width = PREVIEW.winfo_width()
         current_height = PREVIEW.winfo_height()
-        # Resize the processed frame to fit the current preview window size
-        temp_frame = fit_image_to_preview(temp_frame, current_width, current_height)
-        image = cv2.cvtColor(temp_frame, cv2.COLOR_BGR2RGB)
+        
+        display_frame = fit_image_to_preview(processed_frame, current_width, current_height)
+        image = cv2.cvtColor(display_frame, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(image)
         image = ctk.CTkImage(image, size=(current_width, current_height))
+        
         preview_label_cam.configure(image=image, width=current_width, height=current_height)
         ROOT.update()
+        
         if PREVIEW.state() == 'withdrawn':
             break
+
     camera.release()
     PREVIEW.withdraw()
+
+    if enhancer_switch:
+        enhancer_switch.configure(state="normal")
+        if previous_enhancer_state:
+            enhancer_switch.select()
+            update_tumbler('face_enhancer', True)
 
 def fit_image_to_preview(image, preview_width, preview_height):
     h, w = image.shape[:2]

@@ -1563,3 +1563,34 @@ def get_two_faces(frame: Frame) -> List[Face]:
         sorted_faces = sorted(faces, key=lambda x: x.bbox[0]) # Sort the faces from left to right
         return sorted_faces[:2]  # Return up to two faces, leftmost and rightmost
     return [] # If no faces were detected, return an empty list
+
+def estimate_head_rotation(face: Face) -> float:
+    """
+    Calculates the head rotation angle in degrees relative to the vertical axis.
+    Returns 0.0 if landmarks are missing.
+    """
+    if face.landmark_2d_106 is None:
+        return 0.0
+
+    landmarks = face.landmark_2d_106.astype(np.int32)
+    
+    # Use nose bridge (72) and nose tip (80) to determine angle
+    if len(landmarks) < 81:
+         return 0.0
+
+    point_72 = landmarks[72]
+    point_80 = landmarks[80]
+
+    dx = point_72[0] - point_80[0]
+    dy = point_72[1] - point_80[1]
+
+    angle_radians = math.atan2(-dx, -dy)
+    angle_degrees = math.degrees(angle_radians)
+
+    # Normalize angle
+    if angle_degrees > 180:
+        angle_degrees -= 360
+    elif angle_degrees < -180:
+        angle_degrees += 360
+        
+    return angle_degrees

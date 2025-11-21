@@ -92,3 +92,8 @@ use_ink_filter_white=False
 use_ink_filter_black=False
 use_black_lines=False
 face_forehead_var=0.1
+
+auto_rotate_value = True 
+auto_rotate_switch_main = None
+auto_rotate_switch_preview = None
+rotation_check_interval = 5
