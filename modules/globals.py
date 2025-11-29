@@ -9,6 +9,7 @@ file_types = [
     ('Video', ('*.mp4','*.mkv'))
 ]
 
+
 source_path = None
 target_path = None
 output_path = None
@@ -97,3 +98,5 @@ auto_rotate_value = True
 auto_rotate_switch_main = None
 auto_rotate_switch_preview = None
 rotation_check_interval = 5
+
+detection_frequency = 1 # Default to 3 (Balanced speed/accuracy)

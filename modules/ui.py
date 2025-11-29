@@ -123,6 +123,22 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
     fps_label = ctk.CTkLabel(ui_container, text='FPS:  ', justify='center',font=("Arial", 12))
     fps_label.place(relx=0, rely=0.04, relwidth=1)
     
+    def update_det_freq(value):
+        modules.globals.detection_frequency = int(value)
+
+    det_freq_label = ctk.CTkLabel(ui_container, text='Detect Freq:', font=("Arial", 12), anchor="e")
+    det_freq_label.place(relx=0.36, rely=0.07, relwidth=0.2)
+
+    det_freq_var = ctk.StringVar(value=str(modules.globals.detection_frequency))
+    det_freq_dropdown = ctk.CTkOptionMenu(ui_container, 
+                                          values=[str(i) for i in range(1, 11)],
+                                          variable=det_freq_var,
+                                          command=update_det_freq,
+                                          width=50,
+                                          height=22,
+                                          font=("Arial", 11))
+    det_freq_dropdown.place(relx=0.45, rely=0.10,relwidth=0.12)
+    
     # Image preview area
     source_label = ctk.CTkLabel(ui_container, text=None)
     source_label.place(relx=0.03, rely=y_start + 0.40*y_increment, relwidth=0.40, relheight=0.15)
@@ -1327,7 +1343,8 @@ def fit_image_to_preview(image, preview_width, preview_height):
         new_width = preview_width
         new_height = int(new_width / aspect_ratio)
 
-    resized_image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_LANCZOS4)
+    # CHANGE IS HERE: Changed INTER_LANCZOS4 to INTER_LINEAR
+    resized_image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_LINEAR)
 
     # Create a black canvas of the size of the preview window
     canvas = np.zeros((preview_height, preview_width, 3), dtype=np.uint8)

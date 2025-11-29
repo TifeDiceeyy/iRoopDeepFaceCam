@@ -69,7 +69,8 @@ assignment_cooldown: float = 1.0  # 1 second cooldown
 
 # How many frames in a row a face has been lost (used in single-face tracking)
 face_lost_count = 0
-
+detection_frame_counter: int = 0
+cached_detected_faces: List[Face] = []
 
 def pre_check() -> bool:
     """
@@ -216,6 +217,12 @@ def _process_face_swap(frame: Frame, source_face: List[Face], target_face: Face,
     """Performs face swapping and masking on a single face."""
     # Crop the face region
     cropped_frame, crop_info = crop_face_region(frame, target_face) # Crops out the face region
+    
+    # --- FIX START: Check for empty crop to prevent crash ---
+    if cropped_frame is None or cropped_frame.size == 0 or cropped_frame.shape[0] == 0 or cropped_frame.shape[1] == 0:
+        return frame
+    # --- FIX END ---
+
     # Adjust the face bbox for the cropped frame
     adjusted_target_face = create_adjusted_face(target_face, crop_info) # Adjust the face information to the new cropped frame
     # Perform face swapping on the cropped region
@@ -415,48 +422,73 @@ def _process_face_tracking_both(
             
             if best_match_index == 0:
                 modules.globals.target_face1_score = best_match_score
+                # --- APPLY USER DROPDOWN SELECTION FOR FACE 1 ---
+                if modules.globals.face_index_range != -1:
+                    source_index = modules.globals.face_index_range
+                else:
+                    source_index = source_face_order[0]
             elif best_match_index == 1:
                modules.globals.target_face2_score = best_match_score
-               
-            source_index = source_face_order[best_match_index]
+               # --- APPLY USER DROPDOWN SELECTION FOR FACE 2 ---
+               if hasattr(modules.globals, 'face2_index_range'):
+                    source_index = modules.globals.face2_index_range
+               else:
+                    source_index = source_face_order[1]
             
 
         elif modules.globals.use_pseudo_face and best_match_score < modules.globals.pseudo_face_threshold:
             use_pseudo_face = True
             if best_match_index == 0:
                 avg_position = np.mean(first_face_position_history, axis=0) if first_face_position_history else first_face_position
+                # Source for Face 1 on Pseudo
+                if modules.globals.face_index_range != -1:
+                    source_index = modules.globals.face_index_range
+                else:
+                    source_index = source_face_order[0]
             elif best_match_index == 1:
                 avg_position = np.mean(second_face_position_history, axis=0) if second_face_position_history else second_face_position
+                # Source for Face 2 on Pseudo
+                if hasattr(modules.globals, 'face2_index_range'):
+                    source_index = modules.globals.face2_index_range
+                else:
+                    source_index = source_face_order[1]
             else:
                 avg_position = target_position
+            
             pseudo_face = create_pseudo_face(avg_position)
             return _process_face_swap(frame, source_face, pseudo_face, source_index)    
         else:
             return frame
         
     else:
-        
         # Initialization of one or both faces
-        source_index = source_face_order[source_index % 2]
-        if source_index % 2 == 0:
+        # We determine which track to fill based on which one is empty (None)
+        
+        if first_face_embedding is None:
             first_face_embedding = target_embedding
             first_face_position = target_position
             first_face_id = face_id
             first_face_position_history.append(target_position)
-            
-        else:
+            # Use Dropdown 1 Selection
+            if modules.globals.face_index_range != -1:
+                source_index = modules.globals.face_index_range
+            else:
+                source_index = source_face_order[0]
+
+        elif second_face_embedding is None:
             second_face_embedding = target_embedding
             second_face_position = target_position
             second_face_id = face_id
             second_face_position_history.append(target_position)
+            # Use Dropdown 2 Selection
+            if hasattr(modules.globals, 'face2_index_range'):
+                source_index = modules.globals.face2_index_range
+            else:
+                source_index = source_face_order[1]
     
     if use_pseudo_face:
-        if source_index == source_face_order[0]:
-            avg_position = np.mean(first_face_position_history, axis=0) if first_face_position_history else first_face_position
-        else:
-            avg_position = np.mean(second_face_position_history, axis=0) if second_face_position_history else second_face_position
-        pseudo_face = create_pseudo_face(avg_position)
-        return _process_face_swap(frame, source_face, pseudo_face, source_index)
+        # Pseudo face logic handles source_index internally in the block above
+        pass 
     else:
          return _process_face_swap(frame, source_face, target_face, source_index)
 
@@ -568,12 +600,26 @@ def process_frame(source_face: List[Face], temp_frame: Frame) -> Frame:
     global first_face_embedding, second_face_embedding, first_face_position, second_face_position
     global first_face_id, second_face_id
     global first_face_lost_count, second_face_lost_count
+    # Optimization Globals
+    global detection_frame_counter, cached_detected_faces
 
     # Rotate the frame
     temp_frame = _rotate_frame(temp_frame, modules.globals.face_rot_range)
 
-    # Detect faces in the frame
-    all_faces = _detect_faces(temp_frame)
+    # --- OPTIMIZATION: DETECTION SKIPPING ---
+    # Only run heavy face detection once every 3 frames.
+    # On the frames in between, use the cached faces.
+    detection_frame_counter += 1
+    
+    # If the counter is 0 (first run) or it's the 3rd frame, OR we don't have cached faces yet
+    if detection_frame_counter % modules.globals.detection_frequency == 0 or not cached_detected_faces:
+        all_faces = _detect_faces(temp_frame)
+        # Update cache regardless. If no faces found, cache becomes empty.
+        cached_detected_faces = all_faces
+    else:
+        # Use the faces found in the previous frame
+        all_faces = cached_detected_faces
+    # ----------------------------------------
 
     # Handle face tracking reset logic
     if modules.globals.face_tracking: # If we're using face tracking
@@ -599,8 +645,6 @@ def process_frame(source_face: List[Face], temp_frame: Frame) -> Frame:
     # Determine source face order
     active_source_index = 1 if modules.globals.flip_faces else 0 # If we should flip the source faces
     source_face_order = [1, 0] if modules.globals.flip_faces else [0, 1] # If we should flip the source faces
-
-
 
     if modules.globals.many_faces: # If we should swap many faces
          if modules.globals.face_tracking: # If we are tracking faces
@@ -649,15 +693,11 @@ def process_frame(source_face: List[Face], temp_frame: Frame) -> Frame:
                 else:
                     temp_frame = _process_face_swap(temp_frame, source_face, target_faces[i], source_index) # Swap the faces without tracking
 
-                # temp_frame = _process_face_swap(temp_frame, source_face, target_faces[i], source_index) # Swap the faces without tracking
-
     # Apply mouth masks
     temp_frame = _apply_mouth_masks(temp_frame, target_faces, mouth_masks, face_masks)
 
     # Draw face boxes and landmarks if enabled
     if modules.globals.show_target_face_box:
-        # face_analyser = get_face_analyser()
-        # temp_frame = face_analyser.draw_on(temp_frame, target_faces)
         for face in target_faces:
             temp_frame = draw_all_landmarks(temp_frame, face) # Draw the face landmarks
 
@@ -675,7 +715,6 @@ def process_frame(source_face: List[Face], temp_frame: Frame) -> Frame:
         modules.globals.use_black_lines=True
         temp_frame = apply_ink_filter(temp_frame)
 
-    
     return temp_frame
 
 def apply_pencil_filter(frame: Frame) -> Frame:
