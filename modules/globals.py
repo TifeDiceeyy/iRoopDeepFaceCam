@@ -40,8 +40,8 @@ detect_face_right = None
 detect_face_right_value = False
 show_target_face_box = None
 mouth_mask=False
-mask_feather_ratio=8
-mask_down_size=0.50
+mask_feather_ratio=30
+mask_down_size=1.05
 mask_size=1
 show_mouth_mask_box=False
 flip_faces_value=False
@@ -100,3 +100,5 @@ auto_rotate_switch_preview = None
 rotation_check_interval = 5
 
 detection_frequency = 1 # Default to 3 (Balanced speed/accuracy)
+
+mask_target_option = "Both" # Add this line

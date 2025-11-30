@@ -239,9 +239,27 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
 
     # Left column of switches
     both_faces_var = ctk.BooleanVar(value=modules.globals.both_faces)
-    both_faces_switch = ctk.CTkSwitch(ui_container, text='Use First Two Source Faces', variable=both_faces_var, cursor='hand2',
+    both_faces_switch = ctk.CTkSwitch(ui_container, text='Use 1st 2 Faces', variable=both_faces_var, cursor='hand2',
                                     command=lambda: both_faces(modules.globals, 'both_faces', both_faces_var.get()))
     both_faces_switch.place(relx=0.03, rely=y_start + 6.4*y_increment, relwidth=0.8)
+
+    def update_mask_target(value):
+        modules.globals.mask_target_option = value
+
+    # Label "Mask:"
+    mask_target_label = ctk.CTkLabel(ui_container, text='Mask:', font=("Arial", 12))
+    mask_target_label.place(relx=0.35, rely=y_start + 6.4*y_increment, relwidth=0.05)
+
+    # Dropdown [Both, Left, Right]
+    mask_target_var = ctk.StringVar(value="Both")
+    mask_target_dropdown = ctk.CTkOptionMenu(ui_container, 
+                                          values=["Both", "Left", "Right"],
+                                          variable=mask_target_var,
+                                          command=update_mask_target,
+                                          width=60,
+                                          height=22,
+                                          font=("Arial", 11))
+    mask_target_dropdown.place(relx=0.42, rely=y_start + 6.4*y_increment + 0.002, relwidth=0.10)
 
     flip_faces_value = ctk.BooleanVar(value=modules.globals.flip_faces)
     flip_faces_switch = ctk.CTkSwitch(ui_container, text='Flip First Two Source Faces', variable=flip_faces_value, cursor='hand2',
@@ -369,15 +387,15 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
     mask_size_dropdown.place(relx=0.98, rely=0.5, relwidth=0.1, anchor="e")
 
     # Down size dropdown
-    mask_down_size_var = ctk.StringVar(value="0.50")
-    mask_down_size_dropdown = ctk.CTkOptionMenu(outline_frame, values=["0.01","0.02","0.03","0.04","0.05","0.06","0.07","0.08","0.09","0.10","0.15","0.20","0.25","0.30","0.35","0.40","0.45","0.50","0.55","0.60","0.65","0.70","0.75","0.80","0.85","0.90","0.95","1.00","1.25","1.50","1.75","2.00","2.25","2.50","2.75","3.00"],
+    mask_down_size_var = ctk.StringVar(value="1.05")
+    mask_down_size_dropdown = ctk.CTkOptionMenu(outline_frame, values=["0.80","0.85","0.90","0.95","1.00","1.05","1.10","1.15","1.20","1.25","1.50","1.75","2.00","2.25","2.50","2.75","3.00"],
                                             variable=mask_down_size_var,
                                             command=mask_down_size)
     mask_down_size_dropdown.place(relx=0.87, rely=0.5, relwidth=0.12, anchor="e")
 
     # Feather ratio dropdown
-    mask_feather_ratio_var = ctk.StringVar(value="8")
-    mask_feather_ratio_size_dropdown = ctk.CTkOptionMenu(outline_frame, values=["1","2","3","4","5","6","7","8","9","10"],
+    mask_feather_ratio_var = ctk.StringVar(value="30")
+    mask_feather_ratio_size_dropdown = ctk.CTkOptionMenu(outline_frame, values=["8","9","10","15","20","25","30","35","40"],
                                             variable=mask_feather_ratio_var,
                                             command=mask_feather_ratio_size)
     mask_feather_ratio_size_dropdown.place(relx=0.76, rely=0.5, relwidth=0.1,  anchor="e")
@@ -1198,8 +1216,13 @@ def webcam_preview():
         
         modules.globals.face_index_dropdown_preview.configure(values=dropdown_values)
         modules.globals.face2_index_dropdown_preview.configure(values=dropdown2_values)
+        # Reset Face 1 (F1) to Auto (-1)
         modules.globals.face_index_var.set("-1")
         modules.globals.face_index_range = -1
+
+        # Reset Face 2 (F2) to First Face (0)
+        modules.globals.face2_index_var.set("0")
+        modules.globals.face2_index_range = 0
 
         for frame_processor in frame_processors:
              if hasattr(frame_processor, 'extract_face_embedding'):
