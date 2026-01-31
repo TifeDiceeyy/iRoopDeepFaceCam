@@ -676,3 +676,5 @@ sudo apt-get -y install cuda-toolkit-11-8
 
 
 
+# Star History
+[![Star History Chart](https://api.star-history.com/svg?repos=iVideoGameBoss/iRoopDeepFaceCam&type=Date)](https://star-history.com/#iVideoGameBoss/iRoopDeepFaceCam&Date)
