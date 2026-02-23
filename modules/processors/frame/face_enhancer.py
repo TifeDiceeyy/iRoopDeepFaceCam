@@ -51,14 +51,29 @@ def get_face_enhancer() -> Any:
 
 
 def enhance_face(temp_frame: Frame) -> Frame:
-    import numpy as np
     original = temp_frame.copy()
+    h, w = temp_frame.shape[:2]
+
+    scale = float(modules.globals.enhancer_scale)
+    if scale < 0.99:
+        # Downscale before GFPGAN for speed; upscale result back to original size
+        sw, sh = max(64, int(w * scale)), max(64, int(h * scale))
+        input_frame = cv2.resize(temp_frame, (sw, sh), interpolation=cv2.INTER_AREA)
+    else:
+        input_frame = temp_frame
+
     with THREAD_SEMAPHORE:
-        _, _, enhanced = get_face_enhancer().enhance(
-            temp_frame,
+        _, _, enhanced_out = get_face_enhancer().enhance(
+            input_frame,
             paste_back=True,
             weight=modules.globals.enhancer_fidelity
         )
+
+    if scale < 0.99:
+        enhanced = cv2.resize(enhanced_out, (w, h), interpolation=cv2.INTER_LINEAR)
+    else:
+        enhanced = enhanced_out
+
     blend = modules.globals.restorer_blend / 100.0
     if blend >= 1.0:
         return enhanced

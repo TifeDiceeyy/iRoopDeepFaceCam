@@ -50,9 +50,10 @@ class LiveSwapWorker:
         self.enhancer_frame_count = 0
 
         # Async enhancer thread
-        self._enh_lock   = threading.Lock()
-        self._enh_input  = None   # latest swapped frame waiting for GFPGAN
-        self._enh_output = None   # latest GFPGAN-processed frame (display this)
+        self._enh_lock        = threading.Lock()
+        self._enh_input       = None   # latest swapped frame waiting for GFPGAN
+        self._enh_output      = None   # latest GFPGAN-processed frame (display this)
+        self._enh_output_time = 0.0    # monotonic timestamp of last _enh_output update
 
         # Auto-Rotation Variables
         self.rotation_check_counter = 0
@@ -89,6 +90,8 @@ class LiveSwapWorker:
 
         threading.Thread(target=self.process_loop,   daemon=True).start()
         threading.Thread(target=self._enhancer_loop, daemon=True).start()
+        # Pre-warm GFPGAN so the first toggle doesn't cause a visible hang
+        threading.Thread(target=self._prewarm_enhancer, daemon=True).start()
 
     def set_resolution(self, width, height):
         self.new_width = width
@@ -116,6 +119,7 @@ class LiveSwapWorker:
                     result = enh_process_frame(self.source_images, frame_to_enh)
                     with self._enh_lock:
                         self._enh_output = result
+                        self._enh_output_time = time.monotonic()
                 except Exception as e:
                     print(f"[Enhancer] {e}", flush=True)
             else:
@@ -124,6 +128,14 @@ class LiveSwapWorker:
                     with self._enh_lock:
                         self._enh_output = None
                 time.sleep(0.008)  # avoid busy-wait when idle
+
+    def _prewarm_enhancer(self):
+        """Load GFPGAN model silently in background so first toggle has no hang."""
+        try:
+            from modules.processors.frame.face_enhancer import get_face_enhancer
+            get_face_enhancer()
+        except Exception as e:
+            print(f"[Enhancer prewarm] {e}", flush=True)
 
     def process_loop(self):
         # Initial Setup
@@ -213,9 +225,10 @@ class LiveSwapWorker:
                 if skip <= 1 or (self.enhancer_frame_count % skip == 0):
                     with self._enh_lock:
                         self._enh_input = processed_frame.copy()
-                # Show latest enhanced frame if ready, otherwise show swap frame as-is
+                # Show latest enhanced frame only if it's fresh (< 2 s old)
                 with self._enh_lock:
-                    if self._enh_output is not None:
+                    age = time.monotonic() - self._enh_output_time
+                    if self._enh_output is not None and age < 2.0:
                         processed_frame = self._enh_output
             else:
                 self.enhancer_frame_count = 0
@@ -1394,7 +1407,19 @@ def create_preview(parent: ctk.CTkToplevel) -> ctk.CTkToplevel:
     enh_blend_slider_p.set(modules.globals.restorer_blend)
     enh_blend_slider_p.pack(side='left', padx=(0, 10), pady=4)
 
-    ctk.CTkLabel(restorer_row, text="Send Every:", font=("Arial", 12)).pack(side='left', padx=(0, 2), pady=4)
+    ctk.CTkLabel(restorer_row, text="Scale:", font=("Arial", 12)).pack(side='left', padx=(0, 2), pady=4)
+    enh_scale_val_lbl_p = ctk.CTkLabel(restorer_row, text=f"{modules.globals.enhancer_scale:.2f}", width=32, font=("Arial", 11), anchor='w')
+    enh_scale_val_lbl_p.pack(side='left', padx=(0, 2), pady=4)
+    def on_enh_scale_p(v):
+        val = round(float(v) * 4) / 4   # snap to 0.25, 0.50, 0.75, 1.00
+        val = max(0.25, min(1.0, val))
+        modules.globals.enhancer_scale = val
+        enh_scale_val_lbl_p.configure(text=f"{val:.2f}")
+    enh_scale_slider_p = ctk.CTkSlider(restorer_row, from_=0.25, to=1.0, number_of_steps=3, command=on_enh_scale_p, width=90, height=20)
+    enh_scale_slider_p.set(modules.globals.enhancer_scale)
+    enh_scale_slider_p.pack(side='left', padx=(0, 10), pady=4)
+
+    ctk.CTkLabel(restorer_row, text="Every:", font=("Arial", 12)).pack(side='left', padx=(0, 2), pady=4)
     enh_skip_var_p = ctk.StringVar(value=str(modules.globals.enhancer_skip_frames))
     def update_enh_skip_p(v): modules.globals.enhancer_skip_frames = int(v)
     ctk.CTkOptionMenu(restorer_row,

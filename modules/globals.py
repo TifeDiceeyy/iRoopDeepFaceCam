@@ -114,6 +114,7 @@ crop_padding = 0.2  # Padding fraction around face bbox when cropping for swap
 
 enhancer_fidelity = 0.5   # GFPGAN internal restoration strength: 0.0 = subtle, 1.0 = full
 restorer_blend    = 100   # How much restored face blends over swapped face: 0=none, 100=full
+enhancer_scale    = 1.0   # Downscale face before GFPGAN: 1.0=full quality, 0.5=2x faster, 0.25=4x faster
 
 use_occluder = False  # Use landmark convex-hull mask to restrict swap to face shape only
 

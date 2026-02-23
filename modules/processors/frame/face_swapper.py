@@ -134,27 +134,10 @@ def reset_face_swapper() -> None:
 def swap_face(source_face: Face, target_face: Face, temp_frame: Frame) -> Frame:
     """
     Swaps the source face onto the target face in the given frame.
+    Returns the raw NN swap result — blending/masking is handled by the caller.
     """
-    face_swapper = get_face_swapper() # Gets the face swapper model
-
-    # Apply the face swap
-    swapped_frame = face_swapper.get(temp_frame, target_face, source_face, paste_back=True)
-
-    # Create a mask for the target face
-    target_mask = create_face_mask(target_face, temp_frame)
-
-    # Blur the edges of the mask
-    blurred_mask = blur_edges(target_mask)
-    blurred_mask = blurred_mask / 255.0 # Makes the mask values between 0 and 1
-
-    # Ensure the mask has 3 channels to match the frame
-    blurred_mask_3channel = np.repeat(blurred_mask[:, :, np.newaxis], 3, axis=2)
-
-    # Blend the swapped face with the original frame using the blurred mask
-    blended_frame = (swapped_frame * blurred_mask_3channel +
-                     temp_frame * (1 - blurred_mask_3channel))
-
-    return blended_frame.astype(np.uint8) # Converts the blended frame back to a regular image
+    face_swapper = get_face_swapper()
+    return face_swapper.get(temp_frame, target_face, source_face, paste_back=True)
 
 def _rotate_frame(frame: Frame, rotation_value: int) -> Frame:
     """Rotates the frame based on the rotation value and its inverse."""
@@ -328,11 +311,12 @@ def _process_face_swap(frame: Frame, source_face: List[Face], target_face: Face,
         face_shape_mask = face_shape_mask.astype(np.float32) / 255.0
         mask = mask * face_shape_mask
 
+    # Apply color correction to the swapped face BEFORE blending so the
+    # correction is confined to face pixels only (prevents a visible rectangle)
+    swapped_region = apply_color_correction(swapped_region)
+
     # Blend the swapped region with the original cropped region
     blended_region = blend_with_mask(swapped_region, cropped_frame, mask) # Blends the swapped face onto the original face
-
-    # Apply color correction to the blended face region
-    blended_region = apply_color_correction(blended_region)
 
     # Final blend: mix swapped result with the original crop
     if modules.globals.final_blend_enabled:
