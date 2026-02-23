@@ -817,37 +817,40 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
                                               fg_color="green", button_color="dark green", button_hover_color="forest green")
     preview_size_dropdown.place(relx=space_between*5 + button_width*4, rely=button_y, relwidth=button_width, relheight=button_height)
 
-    # --- Virtual Camera & Swapper Resolution ---
-    vcam_label = ctk.CTkLabel(ui_container, text="Virtual Cam:", font=("Arial", 12), anchor="e")
-    vcam_label.place(relx=0.02, rely=0.87, relwidth=0.14)
+    # --- Virtual Camera & Swapper Resolution (own bordered section) ---
+    vcam_swap_frame = ctk.CTkFrame(ui_container, fg_color="transparent", border_width=1, border_color="grey")
+    vcam_swap_frame.place(relx=0.02, rely=0.91, relwidth=0.96, relheight=0.04)
+
+    vcam_label = ctk.CTkLabel(vcam_swap_frame, text="Virtual Cam:", font=("Arial", 12), anchor="e")
+    vcam_label.place(relx=0.01, rely=0.1, relwidth=0.14, relheight=0.8)
 
     virtual_cam_var = ctk.BooleanVar(value=modules.globals.virtual_camera_out)
     def toggle_virtual_cam():
         modules.globals.virtual_camera_out = virtual_cam_var.get()
-    vcam_switch = ctk.CTkSwitch(ui_container, text='', variable=virtual_cam_var,
+    vcam_switch = ctk.CTkSwitch(vcam_swap_frame, text='', variable=virtual_cam_var,
                                 cursor='hand2', command=toggle_virtual_cam, width=40)
-    vcam_switch.place(relx=0.17, rely=0.87, relwidth=0.10)
+    vcam_switch.place(relx=0.16, rely=0.1, relwidth=0.10, relheight=0.8)
 
-    vcam_status = ctk.CTkLabel(ui_container,
-                               text="" if PYVIRTUALCAM_AVAILABLE else "(install pyvirtualcam)",
+    vcam_status = ctk.CTkLabel(vcam_swap_frame,
+                               text="OK" if PYVIRTUALCAM_AVAILABLE else "install pyvirtualcam",
                                font=("Arial", 10), text_color="grey")
-    vcam_status.place(relx=0.28, rely=0.87, relwidth=0.18)
+    vcam_status.place(relx=0.27, rely=0.1, relwidth=0.20, relheight=0.8)
 
-    swapper_res_label = ctk.CTkLabel(ui_container, text="Swap Res:", font=("Arial", 12), anchor="e")
-    swapper_res_label.place(relx=0.49, rely=0.87, relwidth=0.14)
+    swapper_res_label = ctk.CTkLabel(vcam_swap_frame, text="Swap Res:", font=("Arial", 12), anchor="e")
+    swapper_res_label.place(relx=0.50, rely=0.1, relwidth=0.14, relheight=0.8)
 
     swapper_res_var = ctk.StringVar(value=str(modules.globals.swapper_resolution))
     def update_swapper_res(value):
         modules.globals.swapper_resolution = int(value)
         from modules.processors.frame.face_swapper import reset_face_swapper
         reset_face_swapper()
-    swapper_res_dropdown = ctk.CTkOptionMenu(ui_container, values=["128", "256", "512"],
+    swapper_res_dropdown = ctk.CTkOptionMenu(vcam_swap_frame, values=["128", "256", "512"],
                                              variable=swapper_res_var,
                                              command=update_swapper_res,
-                                             height=24, font=("Arial", 12))
-    swapper_res_dropdown.place(relx=0.64, rely=0.87, relwidth=0.13)
+                                             height=28, font=("Arial", 12))
+    swapper_res_dropdown.place(relx=0.65, rely=0.1, relwidth=0.13, relheight=0.8)
 
-    button_y = 0.93  # Y position of the camera row
+    button_y = 0.96  # Y position of the camera row
 
     # --- Camera Selection ---
     camera_label = ctk.CTkLabel(ui_container, text="Select Camera:")
@@ -888,7 +891,7 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
     
     # Status and donate labels
     status_label = ctk.CTkLabel(ui_container, text=None, justify='center')
-    status_label.place(relx=0.05, rely=0.97, relwidth=0.9)
+    status_label.place(relx=0.05, rely=0.99, relwidth=0.9)
 
     if not modules.globals.face_tracking:
         pseudo_face_switch.configure(state="disabled")
