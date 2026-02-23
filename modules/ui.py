@@ -553,9 +553,24 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
     nsfw_filter_switch.place(relx=0.55, rely=y_start + 9.2*y_increment, relwidth=0.4)
 
     enhancer_value = ctk.BooleanVar(value=modules.globals.fp_ui['face_enhancer'])
-    enhancer_switch = ctk.CTkSwitch(ui_container, text='Face Enhancer (Video)', variable=enhancer_value, cursor='hand2',
+    enhancer_switch = ctk.CTkSwitch(ui_container, text='Face Enhancer', variable=enhancer_value, cursor='hand2',
                                     command=lambda: update_tumbler('face_enhancer', enhancer_value.get()))
-    enhancer_switch.place(relx=0.55, rely=y_start + 9.9*y_increment, relwidth=0.4)
+    enhancer_switch.place(relx=0.55, rely=y_start + 9.9*y_increment, relwidth=0.25)
+
+    enhancer_fidelity_label = ctk.CTkLabel(ui_container, text='Fidelity:', font=("Arial", 12), anchor='e')
+    enhancer_fidelity_label.place(relx=0.70, rely=y_start + 9.9*y_increment, relwidth=0.12)
+
+    enhancer_fidelity_var = ctk.StringVar(value=str(modules.globals.enhancer_fidelity))
+    def update_enhancer_fidelity(value):
+        modules.globals.enhancer_fidelity = float(value)
+        refresh_preview()
+    enhancer_fidelity_dropdown = ctk.CTkOptionMenu(
+        ui_container,
+        values=["0.0","0.1","0.2","0.3","0.4","0.5","0.6","0.7","0.8","0.9","1.0"],
+        variable=enhancer_fidelity_var,
+        command=update_enhancer_fidelity,
+        height=24, font=("Arial", 12))
+    enhancer_fidelity_dropdown.place(relx=0.83, rely=y_start + 9.9*y_increment, relwidth=0.13)
 
 
     ##### Mouth Mask Frame

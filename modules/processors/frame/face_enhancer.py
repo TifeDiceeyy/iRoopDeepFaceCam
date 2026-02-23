@@ -54,7 +54,8 @@ def enhance_face(temp_frame: Frame) -> Frame:
     with THREAD_SEMAPHORE:
         _, _, temp_frame = get_face_enhancer().enhance(
             temp_frame,
-            paste_back=True
+            paste_back=True,
+            weight=modules.globals.enhancer_fidelity
         )
     return temp_frame
 
