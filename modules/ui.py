@@ -11,7 +11,7 @@ import modules.globals
 import modules.metadata
 from modules.face_analyser import get_one_face, get_one_face_left, get_one_face_right,get_many_faces
 from modules.capturer import get_video_frame, get_video_frame_total
-from modules.processors.frame.core import get_frame_processors_modules
+from modules.processors.frame.core import get_frame_processors_modules, set_frame_processors_modules_from_ui
 from modules.processors.frame.face_swapper import estimate_head_rotation
 
 from modules.utilities import is_image, is_video, resolve_relative_path, has_image_extension
@@ -1236,6 +1236,29 @@ def create_preview(parent: ctk.CTkToplevel) -> ctk.CTkToplevel:
     ctk.CTkOptionMenu(fb_row, values=[str(x) for x in range(0, 105, 5)],
                       variable=fb_amount_var_p, command=update_fb_amount_p,
                       width=75, height=24, font=("Arial", 12)).pack(side='left', padx=2, pady=3)
+
+    # --- Enhancer Row ---
+    enh_row = ctk.CTkFrame(switch_frame, fg_color="transparent")
+    enh_row.pack(fill='x', side='top')
+
+    ctk.CTkLabel(enh_row, text="Enhancer:", font=("Arial", 12)).pack(side='left', padx=(10, 2), pady=3)
+    enh_enabled_var_p = ctk.BooleanVar(value=modules.globals.fp_ui.get('face_enhancer', False))
+    def toggle_enh_p():
+        val = enh_enabled_var_p.get()
+        modules.globals.fp_ui['face_enhancer'] = val
+        set_frame_processors_modules_from_ui(modules.globals.frame_processors)
+    ctk.CTkSwitch(enh_row, text='', variable=enh_enabled_var_p,
+                  cursor='hand2', command=toggle_enh_p, width=40).pack(side='left', padx=2, pady=3)
+
+    ctk.CTkLabel(enh_row, text="Strength:", font=("Arial", 12)).pack(side='left', padx=(8, 2), pady=3)
+    enh_fid_var_p = ctk.StringVar(value=str(modules.globals.enhancer_fidelity))
+    def update_enh_fid_p(v): modules.globals.enhancer_fidelity = float(v)
+    ctk.CTkOptionMenu(enh_row,
+                      values=["0.0","0.05","0.1","0.15","0.2","0.25","0.3","0.35","0.4",
+                               "0.45","0.5","0.55","0.6","0.65","0.7","0.75","0.8",
+                               "0.85","0.9","0.95","1.0"],
+                      variable=enh_fid_var_p, command=update_enh_fid_p,
+                      width=80, height=24, font=("Arial", 12)).pack(side='left', padx=2, pady=3)
 
     # Slider and Display Container
     preview_slider = ctk.CTkSlider(preview, from_=0, to=0, command=lambda frame_value: update_preview(frame_value))
