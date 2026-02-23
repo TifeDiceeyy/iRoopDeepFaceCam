@@ -204,7 +204,7 @@ global camera
 camera = None
 
 ROOT = None
-ROOT_HEIGHT = 900
+ROOT_HEIGHT = 1100
 ROOT_WIDTH = 600
 
 PREVIEW = None
@@ -317,8 +317,8 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
     # --------------------------------
 
     modules.globals.face_index_var = ctk.StringVar(value="0")
-    y_start = 0.01
-    y_increment = 0.05
+    y_start = 0.0082
+    y_increment = 0.041
 
     # NOTE: All widgets are now parented to 'ui_container' instead of 'root'
 
@@ -373,7 +373,7 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
 
     # Outline frame for face rotation range and dropdown
     face_rot_frame = ctk.CTkFrame(ui_container, fg_color="transparent", border_width=1, border_color="grey")
-    face_rot_frame.place(relx=0.02, rely=y_start + 5.0*y_increment, relwidth=0.96, relheight=0.05)
+    face_rot_frame.place(relx=0.02, rely=y_start + 5.0*y_increment, relwidth=0.96, relheight=0.041)
 
     # Create shared StringVar in modules.globals
     if not hasattr(modules.globals, 'face_rot_range'):
@@ -577,7 +577,7 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
 
     # Outline frame for mouth mask and dropdown
     outline_frame = ctk.CTkFrame(ui_container, fg_color="transparent", border_width=1, border_color="grey")
-    outline_frame.place(relx=0.02, rely=y_start + 10.9*y_increment, relwidth=0.96, relheight=0.05)
+    outline_frame.place(relx=0.02, rely=y_start + 10.9*y_increment, relwidth=0.96, relheight=0.041)
 
    # Create a shared BooleanVar in modules.globals
     if not hasattr(modules.globals, 'mouth_mask_var'):
@@ -624,8 +624,7 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
 
     # Outline frame for face tracking
     outline_face_track_frame = ctk.CTkFrame(ui_container, fg_color="transparent", border_width=1, border_color="grey")
-    outline_face_track_frame.place(relx=0.02, rely=y_start + 11.9*y_increment, relwidth=0.96, relheight=0.24)
-    # outline_face_track_frame.place(relx=0.02, rely=y_start + 11.9*y_increment, relwidth=0.96, relheight=0.24)
+    outline_face_track_frame.place(relx=0.02, rely=y_start + 11.9*y_increment, relwidth=0.96, relheight=0.196)
      # Face Tracking switch
     face_tracking_value = ctk.BooleanVar(value=modules.globals.face_tracking)
     face_tracking_switch = ctk.CTkSwitch(outline_face_track_frame, text='Auto Face Track', variable=face_tracking_value, cursor='hand2',
@@ -793,7 +792,7 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
     # Bottom buttons
     button_width = 0.18  # Width of each button
     button_height = 0.05  # Height of each button
-    button_y = 0.85  # Y position of the buttons
+    button_y = 0.695  # Y position of the buttons
     space_between = (1 - (button_width * 5)) / 6  # Space between buttons
 
     start_button = ctk.CTkButton(ui_container, text='Start', cursor='hand2', command=lambda: select_output_path(start))
@@ -820,22 +819,22 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
 
     # --- Virtual Camera & Swapper Resolution ---
     vcam_label = ctk.CTkLabel(ui_container, text="Virtual Cam:", font=("Arial", 12), anchor="e")
-    vcam_label.place(relx=0.02, rely=0.87, relwidth=0.14)
+    vcam_label.place(relx=0.02, rely=0.712, relwidth=0.14)
 
     virtual_cam_var = ctk.BooleanVar(value=modules.globals.virtual_camera_out)
     def toggle_virtual_cam():
         modules.globals.virtual_camera_out = virtual_cam_var.get()
     vcam_switch = ctk.CTkSwitch(ui_container, text='', variable=virtual_cam_var,
                                 cursor='hand2', command=toggle_virtual_cam, width=40)
-    vcam_switch.place(relx=0.17, rely=0.87, relwidth=0.10)
+    vcam_switch.place(relx=0.17, rely=0.712, relwidth=0.10)
 
     vcam_status = ctk.CTkLabel(ui_container,
                                text="" if PYVIRTUALCAM_AVAILABLE else "(install pyvirtualcam)",
                                font=("Arial", 10), text_color="grey")
-    vcam_status.place(relx=0.28, rely=0.87, relwidth=0.18)
+    vcam_status.place(relx=0.28, rely=0.712, relwidth=0.18)
 
     swapper_res_label = ctk.CTkLabel(ui_container, text="Swap Res:", font=("Arial", 12), anchor="e")
-    swapper_res_label.place(relx=0.49, rely=0.87, relwidth=0.14)
+    swapper_res_label.place(relx=0.49, rely=0.712, relwidth=0.14)
 
     swapper_res_var = ctk.StringVar(value=str(modules.globals.swapper_resolution))
     def update_swapper_res(value):
@@ -846,11 +845,11 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
                                              variable=swapper_res_var,
                                              command=update_swapper_res,
                                              height=24, font=("Arial", 12))
-    swapper_res_dropdown.place(relx=0.64, rely=0.87, relwidth=0.13)
+    swapper_res_dropdown.place(relx=0.64, rely=0.712, relwidth=0.13)
 
     # --- Face Swap Parameters row ---
     blur_label = ctk.CTkLabel(ui_container, text="Edge Blur:", font=("Arial", 12), anchor="e")
-    blur_label.place(relx=0.02, rely=0.896, relwidth=0.14)
+    blur_label.place(relx=0.02, rely=0.733, relwidth=0.14)
 
     blur_amount_var = ctk.StringVar(value=str(modules.globals.blur_amount))
     def update_blur_amount(value):
@@ -860,10 +859,10 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
                                       variable=blur_amount_var,
                                       command=update_blur_amount,
                                       height=24, font=("Arial", 12))
-    blur_dropdown.place(relx=0.17, rely=0.896, relwidth=0.12)
+    blur_dropdown.place(relx=0.17, rely=0.733, relwidth=0.12)
 
     pad_label = ctk.CTkLabel(ui_container, text="Crop Pad:", font=("Arial", 12), anchor="e")
-    pad_label.place(relx=0.33, rely=0.896, relwidth=0.14)
+    pad_label.place(relx=0.33, rely=0.733, relwidth=0.14)
 
     crop_padding_var = ctk.StringVar(value=str(modules.globals.crop_padding))
     def update_crop_padding(value):
@@ -873,10 +872,10 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
                                      variable=crop_padding_var,
                                      command=update_crop_padding,
                                      height=24, font=("Arial", 12))
-    pad_dropdown.place(relx=0.48, rely=0.896, relwidth=0.12)
+    pad_dropdown.place(relx=0.48, rely=0.733, relwidth=0.12)
 
     forehead_label = ctk.CTkLabel(ui_container, text="Forehead:", font=("Arial", 12), anchor="e")
-    forehead_label.place(relx=0.62, rely=0.896, relwidth=0.13)
+    forehead_label.place(relx=0.62, rely=0.733, relwidth=0.13)
 
     forehead_var = ctk.StringVar(value=str(modules.globals.face_forehead_var))
     def update_forehead(value):
@@ -886,16 +885,108 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
                                           variable=forehead_var,
                                           command=update_forehead,
                                           height=24, font=("Arial", 12))
-    forehead_dropdown.place(relx=0.76, rely=0.896, relwidth=0.11)
+    forehead_dropdown.place(relx=0.76, rely=0.733, relwidth=0.11)
 
     occluder_var = ctk.BooleanVar(value=modules.globals.use_occluder)
     def toggle_occluder():
         modules.globals.use_occluder = occluder_var.get()
     occluder_switch = ctk.CTkSwitch(ui_container, text='Occluder', variable=occluder_var,
                                     cursor='hand2', command=toggle_occluder, width=40)
-    occluder_switch.place(relx=0.88, rely=0.896, relwidth=0.11)
+    occluder_switch.place(relx=0.88, rely=0.733, relwidth=0.11)
 
-    button_y = 0.93  # Y position of the camera row (shifted down to make room)
+    # --- Color Correction Frame (outlined) ---
+    cc_frame = ctk.CTkFrame(ui_container, fg_color="transparent", border_width=1, border_color="grey")
+    cc_frame.place(relx=0.02, rely=0.757, relwidth=0.96, relheight=0.072)
+
+    # Row 1: Enable toggle + R / G / B
+    cc_enabled_var = ctk.BooleanVar(value=modules.globals.color_correction_enabled)
+    def toggle_cc():
+        modules.globals.color_correction_enabled = cc_enabled_var.get()
+    cc_switch = ctk.CTkSwitch(cc_frame, text='Color Correct', variable=cc_enabled_var,
+                               cursor='hand2', command=toggle_cc, width=40)
+    cc_switch.place(relx=0.02, rely=0.08, relwidth=0.22, relheight=0.44)
+
+    cc_r_label = ctk.CTkLabel(cc_frame, text="R:", font=("Arial", 11), anchor="e")
+    cc_r_label.place(relx=0.26, rely=0.08, relwidth=0.05, relheight=0.44)
+    cc_r_var = ctk.StringVar(value=str(modules.globals.color_r))
+    def update_cc_r(v): modules.globals.color_r = int(v)
+    ctk.CTkOptionMenu(cc_frame, values=[str(x) for x in range(-100, 110, 10)],
+                      variable=cc_r_var, command=update_cc_r, height=22, font=("Arial", 11)
+                      ).place(relx=0.31, rely=0.08, relwidth=0.14, relheight=0.44)
+
+    cc_g_label = ctk.CTkLabel(cc_frame, text="G:", font=("Arial", 11), anchor="e")
+    cc_g_label.place(relx=0.46, rely=0.08, relwidth=0.05, relheight=0.44)
+    cc_g_var = ctk.StringVar(value=str(modules.globals.color_g))
+    def update_cc_g(v): modules.globals.color_g = int(v)
+    ctk.CTkOptionMenu(cc_frame, values=[str(x) for x in range(-100, 110, 10)],
+                      variable=cc_g_var, command=update_cc_g, height=22, font=("Arial", 11)
+                      ).place(relx=0.51, rely=0.08, relwidth=0.14, relheight=0.44)
+
+    cc_b_label = ctk.CTkLabel(cc_frame, text="B:", font=("Arial", 11), anchor="e")
+    cc_b_label.place(relx=0.66, rely=0.08, relwidth=0.05, relheight=0.44)
+    cc_b_var = ctk.StringVar(value=str(modules.globals.color_b))
+    def update_cc_b(v): modules.globals.color_b = int(v)
+    ctk.CTkOptionMenu(cc_frame, values=[str(x) for x in range(-100, 110, 10)],
+                      variable=cc_b_var, command=update_cc_b, height=22, font=("Arial", 11)
+                      ).place(relx=0.71, rely=0.08, relwidth=0.14, relheight=0.44)
+
+    # Row 2: Brightness / Contrast / Saturation / Sharpness
+    _tone_vals = ["0.5","0.6","0.7","0.8","0.9","1.0","1.1","1.2","1.3","1.4","1.5","1.6","1.8","2.0"]
+
+    cc_br_label = ctk.CTkLabel(cc_frame, text="Bri:", font=("Arial", 11), anchor="e")
+    cc_br_label.place(relx=0.02, rely=0.56, relwidth=0.07, relheight=0.40)
+    cc_br_var = ctk.StringVar(value=str(modules.globals.color_brightness))
+    def update_cc_br(v): modules.globals.color_brightness = float(v)
+    ctk.CTkOptionMenu(cc_frame, values=_tone_vals, variable=cc_br_var,
+                      command=update_cc_br, height=22, font=("Arial", 11)
+                      ).place(relx=0.10, rely=0.56, relwidth=0.14, relheight=0.40)
+
+    cc_co_label = ctk.CTkLabel(cc_frame, text="Con:", font=("Arial", 11), anchor="e")
+    cc_co_label.place(relx=0.26, rely=0.56, relwidth=0.07, relheight=0.40)
+    cc_co_var = ctk.StringVar(value=str(modules.globals.color_contrast))
+    def update_cc_co(v): modules.globals.color_contrast = float(v)
+    ctk.CTkOptionMenu(cc_frame, values=_tone_vals, variable=cc_co_var,
+                      command=update_cc_co, height=22, font=("Arial", 11)
+                      ).place(relx=0.34, rely=0.56, relwidth=0.14, relheight=0.40)
+
+    cc_sa_label = ctk.CTkLabel(cc_frame, text="Sat:", font=("Arial", 11), anchor="e")
+    cc_sa_label.place(relx=0.50, rely=0.56, relwidth=0.07, relheight=0.40)
+    cc_sa_var = ctk.StringVar(value=str(modules.globals.color_saturation))
+    def update_cc_sa(v): modules.globals.color_saturation = float(v)
+    ctk.CTkOptionMenu(cc_frame, values=["0.0","0.2","0.4","0.6","0.8","1.0","1.2","1.4","1.6","1.8","2.0"],
+                      variable=cc_sa_var, command=update_cc_sa, height=22, font=("Arial", 11)
+                      ).place(relx=0.58, rely=0.56, relwidth=0.14, relheight=0.40)
+
+    cc_sh_label = ctk.CTkLabel(cc_frame, text="Sharp:", font=("Arial", 11), anchor="e")
+    cc_sh_label.place(relx=0.73, rely=0.56, relwidth=0.08, relheight=0.40)
+    cc_sh_var = ctk.StringVar(value=str(modules.globals.color_sharpness))
+    def update_cc_sh(v): modules.globals.color_sharpness = float(v)
+    ctk.CTkOptionMenu(cc_frame, values=["0.0","0.2","0.4","0.6","0.8","1.0","1.2","1.4","1.6","1.8","2.0","2.5","3.0"],
+                      variable=cc_sh_var, command=update_cc_sh, height=22, font=("Arial", 11)
+                      ).place(relx=0.82, rely=0.56, relwidth=0.14, relheight=0.40)
+
+    # --- Final Blend Row ---
+    fb_label = ctk.CTkLabel(ui_container, text="Final Blend:", font=("Arial", 12), anchor="e")
+    fb_label.place(relx=0.02, rely=0.835, relwidth=0.14)
+
+    fb_enabled_var = ctk.BooleanVar(value=modules.globals.final_blend_enabled)
+    def toggle_fb():
+        modules.globals.final_blend_enabled = fb_enabled_var.get()
+    fb_switch = ctk.CTkSwitch(ui_container, text='', variable=fb_enabled_var,
+                               cursor='hand2', command=toggle_fb, width=40)
+    fb_switch.place(relx=0.17, rely=0.835, relwidth=0.10)
+
+    fb_amount_label = ctk.CTkLabel(ui_container, text="Swap %:", font=("Arial", 12), anchor="e")
+    fb_amount_label.place(relx=0.29, rely=0.835, relwidth=0.12)
+
+    fb_amount_var = ctk.StringVar(value=str(modules.globals.final_blend_amount))
+    def update_fb_amount(v): modules.globals.final_blend_amount = int(v)
+    ctk.CTkOptionMenu(ui_container, values=[str(x) for x in range(0, 105, 5)],
+                      variable=fb_amount_var, command=update_fb_amount,
+                      height=24, font=("Arial", 12)
+                      ).place(relx=0.42, rely=0.835, relwidth=0.13)
+
+    button_y = 0.868  # Y position of the camera row (shifted down to make room)
 
     # --- Camera Selection ---
     camera_label = ctk.CTkLabel(ui_container, text="Select Camera:")

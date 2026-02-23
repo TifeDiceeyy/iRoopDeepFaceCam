@@ -257,6 +257,53 @@ def _get_source_index(i: int, source_face: List[Face], source_face_order: List[i
     else:
         return i % len(source_face) # If we only have one source face, always use that one
 
+def apply_color_correction(frame: Frame) -> Frame:
+    """Applies user-controlled color correction to a face region (BGR input/output)."""
+    if not modules.globals.color_correction_enabled:
+        return frame
+
+    result = frame.astype(np.float32)
+
+    # RGB channel offsets
+    r_off = modules.globals.color_r
+    g_off = modules.globals.color_g
+    b_off = modules.globals.color_b
+    if r_off != 0 or g_off != 0 or b_off != 0:
+        result[:, :, 2] = np.clip(result[:, :, 2] + r_off, 0, 255)  # R
+        result[:, :, 1] = np.clip(result[:, :, 1] + g_off, 0, 255)  # G
+        result[:, :, 0] = np.clip(result[:, :, 0] + b_off, 0, 255)  # B
+
+    # Brightness
+    brightness = modules.globals.color_brightness
+    if brightness != 1.0:
+        result = np.clip(result * brightness, 0, 255)
+
+    # Contrast (scale around midpoint 128)
+    contrast = modules.globals.color_contrast
+    if contrast != 1.0:
+        result = np.clip((result - 128.0) * contrast + 128.0, 0, 255)
+
+    result = result.astype(np.uint8)
+
+    # Saturation (HSV S channel)
+    saturation = modules.globals.color_saturation
+    if saturation != 1.0:
+        hsv = cv2.cvtColor(result, cv2.COLOR_BGR2HSV).astype(np.float32)
+        hsv[:, :, 1] = np.clip(hsv[:, :, 1] * saturation, 0, 255)
+        result = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+
+    # Sharpness (unsharp mask: 1.0 = no change, >1 = sharper, <1 = softer)
+    sharpness = modules.globals.color_sharpness
+    if sharpness != 1.0:
+        blurred = cv2.GaussianBlur(result, (0, 0), 3)
+        result = np.clip(
+            cv2.addWeighted(result.astype(np.float32), sharpness, blurred.astype(np.float32), 1.0 - sharpness, 0),
+            0, 255
+        ).astype(np.uint8)
+
+    return result
+
+
 def _process_face_swap(frame: Frame, source_face: List[Face], target_face: Face, source_index: int) -> Frame:
     """Performs face swapping and masking on a single face."""
     # Crop the face region
@@ -283,6 +330,15 @@ def _process_face_swap(frame: Frame, source_face: List[Face], target_face: Face,
 
     # Blend the swapped region with the original cropped region
     blended_region = blend_with_mask(swapped_region, cropped_frame, mask) # Blends the swapped face onto the original face
+
+    # Apply color correction to the blended face region
+    blended_region = apply_color_correction(blended_region)
+
+    # Final blend: mix swapped result with the original crop
+    if modules.globals.final_blend_enabled:
+        alpha = modules.globals.final_blend_amount / 100.0
+        blended_region = cv2.addWeighted(blended_region, alpha, cropped_frame, 1.0 - alpha, 0)
+
     # Paste the swapped region back into the original frame
     x, y, w, h = crop_info # Gets the original position of the face
     frame[y:y + h, x:x + w] = blended_region # Puts the blended region back into the original frame

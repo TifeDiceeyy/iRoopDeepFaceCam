@@ -113,3 +113,17 @@ crop_padding = 0.2  # Padding fraction around face bbox when cropping for swap
 enhancer_fidelity = 0.5  # GFPGAN restoration strength: 0.0 = subtle, 1.0 = full
 
 use_occluder = False  # Use landmark convex-hull mask to restrict swap to face shape only
+
+# Color Correction applied to swapped face region
+color_correction_enabled = False
+color_r = 0          # Red channel offset: -100 to +100
+color_g = 0          # Green channel offset: -100 to +100
+color_b = 0          # Blue channel offset: -100 to +100
+color_brightness = 1.0   # Brightness multiplier: 0.5 to 2.0
+color_contrast = 1.0     # Contrast multiplier: 0.5 to 2.0
+color_saturation = 1.0   # Saturation multiplier: 0.0 to 2.0
+color_sharpness = 1.0    # Sharpness: 0.0 (blur) to 3.0 (sharp)
+
+# Final Blend: mix swapped result back with original face crop
+final_blend_enabled = False
+final_blend_amount = 100  # 100 = full swap, 0 = show original
