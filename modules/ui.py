@@ -42,6 +42,13 @@ class LiveSwapWorker:
         self.new_width = 640
         self.new_height = 480
 
+        # FPS Variables
+        self.change_fps_flag = False
+        self.new_fps = 30
+
+        # Enhancer skip counter
+        self.enhancer_frame_count = 0
+
         # Auto-Rotation Variables
         self.rotation_check_counter = 0
 
@@ -82,12 +89,16 @@ class LiveSwapWorker:
         self.new_height = height
         self.change_res_flag = True
 
+    def set_fps(self, fps):
+        self.new_fps = fps
+        self.change_fps_flag = True
+
     def process_loop(self):
         # Initial Setup
         self.camera = cv2.VideoCapture(self.camera_index)
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, modules.ui.PREVIEW_DEFAULT_WIDTH)
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, modules.ui.PREVIEW_DEFAULT_HEIGHT)
-        self.camera.set(cv2.CAP_PROP_FPS, 60)
+        self.camera.set(cv2.CAP_PROP_FPS, modules.globals.camera_fps)
 
         while not self.stopped:
             # --- HANDLE RESOLUTION CHANGE ---
@@ -96,8 +107,17 @@ class LiveSwapWorker:
                 self.camera = cv2.VideoCapture(self.camera_index)
                 self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.new_width)
                 self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.new_height)
-                self.camera.set(cv2.CAP_PROP_FPS, 60)
+                self.camera.set(cv2.CAP_PROP_FPS, modules.globals.camera_fps)
                 self.change_res_flag = False
+
+            # --- HANDLE FPS CHANGE ---
+            if self.change_fps_flag:
+                if self.camera.isOpened(): self.camera.release()
+                self.camera = cv2.VideoCapture(self.camera_index)
+                self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.new_width)
+                self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.new_height)
+                self.camera.set(cv2.CAP_PROP_FPS, self.new_fps)
+                self.change_fps_flag = False
 
             if self.camera.isOpened(): self.camera.grab() # Latency hack
 
@@ -145,7 +165,13 @@ class LiveSwapWorker:
             processed_frame = current_frame.copy()
             if self.source_images:
                 try:
+                    self.enhancer_frame_count += 1
                     for processor in self.frame_processors:
+                        # Enhancer skip: only run GFPGAN every N frames
+                        is_enhancer = getattr(processor, 'NAME', '') == 'DLC.FACE-ENHANCER'
+                        skip = modules.globals.enhancer_skip_frames
+                        if is_enhancer and skip > 1 and (self.enhancer_frame_count % skip != 0):
+                            continue
                         processed_frame = processor.process_frame(self.source_images, processed_frame)
                 except Exception:
                     pass
@@ -324,8 +350,23 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
 
     info_label = ctk.CTkLabel(ui_container, text='Webcam takes 30 seconds to start on first face detection', justify='center')
     info_label.place(relx=0, rely=0, relwidth=1)
-    fps_label = ctk.CTkLabel(ui_container, text='FPS:  ', justify='center',font=("Arial", 12))
-    fps_label.place(relx=0, rely=0.04, relwidth=1)
+    fps_label = ctk.CTkLabel(ui_container, text='FPS:  ', justify='center', font=("Arial", 12))
+    fps_label.place(relx=0, rely=0.04, relwidth=0.55)
+
+    # --- GPU / System Specs ---
+    def _get_gpu_spec():
+        try:
+            import torch
+            if torch.cuda.is_available():
+                name = torch.cuda.get_device_name(0)
+                vram = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
+                return f"GPU: {name}  |  VRAM: {vram:.1f} GB"
+            return "GPU: CPU only (no CUDA)"
+        except Exception:
+            return "GPU: unknown"
+    specs_label = ctk.CTkLabel(ui_container, text=_get_gpu_spec(),
+                               font=("Arial", 11), text_color="grey", justify='center')
+    specs_label.place(relx=0.55, rely=0.04, relwidth=0.45)
     
     def update_det_freq(value):
         modules.globals.detection_frequency = int(value)
@@ -876,9 +917,23 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
     camera_var = ctk.StringVar(value=initial_camera)
     camera_optionmenu = ctk.CTkOptionMenu(ui_container, values=camera_names if camera_names else ["Select Default Camera"],
                                               variable=camera_var,
-                                              command=select_camera,  # Corrected line: pass function directly
+                                              command=select_camera,
                                               fg_color="grey", button_color="dark grey", button_hover_color="light grey")
-    camera_optionmenu.place(relx=0.25, rely=button_y, relwidth=0.70)
+    camera_optionmenu.place(relx=0.25, rely=button_y, relwidth=0.52)
+
+    cam_fps_label = ctk.CTkLabel(ui_container, text="FPS:", font=("Arial", 12), anchor="e")
+    cam_fps_label.place(relx=0.78, rely=button_y, relwidth=0.07)
+
+    cam_fps_var = ctk.StringVar(value=str(modules.globals.camera_fps))
+    def update_cam_fps(value):
+        modules.globals.camera_fps = int(value)
+        if worker is not None:
+            worker.set_fps(int(value))
+    cam_fps_dropdown = ctk.CTkOptionMenu(ui_container, values=["10", "15", "20", "24", "30", "60"],
+                                         variable=cam_fps_var,
+                                         command=update_cam_fps,
+                                         height=28, font=("Arial", 12))
+    cam_fps_dropdown.place(relx=0.86, rely=button_y, relwidth=0.12)
 
     #Store the camera_var and optionmenu in modules.globals
     modules.globals.camera_var = camera_var
@@ -1262,6 +1317,16 @@ def create_preview(parent: ctk.CTkToplevel) -> ctk.CTkToplevel:
                                "0.85","0.9","0.95","1.0"],
                       variable=enh_fid_var_p, command=update_enh_fid_p,
                       width=80, height=24, font=("Arial", 12)).pack(side='left', padx=2, pady=3)
+
+    ctk.CTkLabel(enh_row, text="Skip:", font=("Arial", 12)).pack(side='left', padx=(10, 2), pady=3)
+    enh_skip_var_p = ctk.StringVar(value=str(modules.globals.enhancer_skip_frames))
+    def update_enh_skip_p(v): modules.globals.enhancer_skip_frames = int(v)
+    ctk.CTkOptionMenu(enh_row,
+                      values=["1","2","3","4","5","6","8","10"],
+                      variable=enh_skip_var_p, command=update_enh_skip_p,
+                      width=60, height=24, font=("Arial", 12)).pack(side='left', padx=2, pady=3)
+    ctk.CTkLabel(enh_row, text="(1=every frame, 2=every 2nd...)",
+                 font=("Arial", 10), text_color="grey").pack(side='left', padx=(4, 0), pady=3)
 
     # Slider and Display Container
     preview_slider = ctk.CTkSlider(preview, from_=0, to=0, command=lambda frame_value: update_preview(frame_value))
