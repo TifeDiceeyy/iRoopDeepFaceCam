@@ -49,6 +49,11 @@ class LiveSwapWorker:
         # Enhancer skip counter
         self.enhancer_frame_count = 0
 
+        # Async enhancer thread
+        self._enh_lock   = threading.Lock()
+        self._enh_input  = None   # latest swapped frame waiting for GFPGAN
+        self._enh_output = None   # latest GFPGAN-processed frame (display this)
+
         # Auto-Rotation Variables
         self.rotation_check_counter = 0
 
@@ -82,7 +87,8 @@ class LiveSwapWorker:
                      source_embeddings.append(frame_processor.extract_face_embedding(face))
                 modules.globals.source_face_left_embedding = source_embeddings
 
-        threading.Thread(target=self.process_loop, daemon=True).start()
+        threading.Thread(target=self.process_loop,   daemon=True).start()
+        threading.Thread(target=self._enhancer_loop, daemon=True).start()
 
     def set_resolution(self, width, height):
         self.new_width = width
@@ -92,6 +98,32 @@ class LiveSwapWorker:
     def set_fps(self, fps):
         self.new_fps = fps
         self.change_fps_flag = True
+
+    def _enhancer_loop(self):
+        """Background thread: runs GFPGAN at its own pace, never blocking the swap loop."""
+        from modules.processors.frame.face_enhancer import process_frame as enh_process_frame
+        while not self.stopped:
+            frame_to_enh = None
+
+            if modules.globals.fp_ui.get('face_enhancer', False):
+                with self._enh_lock:
+                    if self._enh_input is not None:
+                        frame_to_enh  = self._enh_input
+                        self._enh_input = None  # consume
+
+            if frame_to_enh is not None:
+                try:
+                    result = enh_process_frame(self.source_images, frame_to_enh)
+                    with self._enh_lock:
+                        self._enh_output = result
+                except Exception as e:
+                    print(f"[Enhancer] {e}", flush=True)
+            else:
+                # Clear stale output when enhancer is toggled off
+                if not modules.globals.fp_ui.get('face_enhancer', False):
+                    with self._enh_lock:
+                        self._enh_output = None
+                time.sleep(0.008)  # avoid busy-wait when idle
 
     def process_loop(self):
         # Initial Setup
@@ -165,16 +197,28 @@ class LiveSwapWorker:
             processed_frame = current_frame.copy()
             if self.source_images:
                 try:
-                    self.enhancer_frame_count += 1
                     for processor in self.frame_processors:
-                        # Enhancer skip: only run GFPGAN every N frames
-                        is_enhancer = getattr(processor, 'NAME', '') == 'DLC.FACE-ENHANCER'
-                        skip = modules.globals.enhancer_skip_frames
-                        if is_enhancer and skip > 1 and (self.enhancer_frame_count % skip != 0):
+                        # Face enhancer is handled async in _enhancer_loop — skip it here
+                        if getattr(processor, 'NAME', '') == 'DLC.FACE-ENHANCER':
                             continue
                         processed_frame = processor.process_frame(self.source_images, processed_frame)
                 except Exception:
                     pass
+
+            # --- ASYNC ENHANCER: queue input, display latest output ---
+            if modules.globals.fp_ui.get('face_enhancer', False):
+                # Queue this swapped frame for GFPGAN (respects Send Every N frames)
+                self.enhancer_frame_count += 1
+                skip = modules.globals.enhancer_skip_frames
+                if skip <= 1 or (self.enhancer_frame_count % skip == 0):
+                    with self._enh_lock:
+                        self._enh_input = processed_frame.copy()
+                # Show latest enhanced frame if ready, otherwise show swap frame as-is
+                with self._enh_lock:
+                    if self._enh_output is not None:
+                        processed_frame = self._enh_output
+            else:
+                self.enhancer_frame_count = 0
 
             # Update Latest Frame
             with self.lock:
