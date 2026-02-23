@@ -555,10 +555,10 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
     enhancer_value = ctk.BooleanVar(value=modules.globals.fp_ui['face_enhancer'])
     enhancer_switch = ctk.CTkSwitch(ui_container, text='Face Enhancer', variable=enhancer_value, cursor='hand2',
                                     command=lambda: update_tumbler('face_enhancer', enhancer_value.get()))
-    enhancer_switch.place(relx=0.55, rely=y_start + 9.9*y_increment, relwidth=0.25)
+    enhancer_switch.place(relx=0.55, rely=y_start + 9.9*y_increment, relwidth=0.20)
 
     enhancer_fidelity_label = ctk.CTkLabel(ui_container, text='Fidelity:', font=("Arial", 12), anchor='e')
-    enhancer_fidelity_label.place(relx=0.70, rely=y_start + 9.9*y_increment, relwidth=0.12)
+    enhancer_fidelity_label.place(relx=0.75, rely=y_start + 9.9*y_increment, relwidth=0.11)
 
     enhancer_fidelity_var = ctk.StringVar(value=str(modules.globals.enhancer_fidelity))
     def update_enhancer_fidelity(value):
@@ -570,7 +570,7 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
         variable=enhancer_fidelity_var,
         command=update_enhancer_fidelity,
         height=24, font=("Arial", 12))
-    enhancer_fidelity_dropdown.place(relx=0.83, rely=y_start + 9.9*y_increment, relwidth=0.13)
+    enhancer_fidelity_dropdown.place(relx=0.86, rely=y_start + 9.9*y_increment, relwidth=0.12)
 
 
     ##### Mouth Mask Frame
@@ -874,6 +874,26 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
                                      command=update_crop_padding,
                                      height=24, font=("Arial", 12))
     pad_dropdown.place(relx=0.48, rely=0.896, relwidth=0.12)
+
+    forehead_label = ctk.CTkLabel(ui_container, text="Forehead:", font=("Arial", 12), anchor="e")
+    forehead_label.place(relx=0.62, rely=0.896, relwidth=0.13)
+
+    forehead_var = ctk.StringVar(value=str(modules.globals.face_forehead_var))
+    def update_forehead(value):
+        modules.globals.face_forehead_var = float(value)
+    forehead_dropdown = ctk.CTkOptionMenu(ui_container,
+                                          values=["0.0","0.05","0.1","0.15","0.2","0.25","0.3","0.4","0.5"],
+                                          variable=forehead_var,
+                                          command=update_forehead,
+                                          height=24, font=("Arial", 12))
+    forehead_dropdown.place(relx=0.76, rely=0.896, relwidth=0.11)
+
+    occluder_var = ctk.BooleanVar(value=modules.globals.use_occluder)
+    def toggle_occluder():
+        modules.globals.use_occluder = occluder_var.get()
+    occluder_switch = ctk.CTkSwitch(ui_container, text='Occluder', variable=occluder_var,
+                                    cursor='hand2', command=toggle_occluder, width=40)
+    occluder_switch.place(relx=0.88, rely=0.896, relwidth=0.11)
 
     button_y = 0.93  # Y position of the camera row (shifted down to make room)
 

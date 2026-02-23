@@ -273,6 +273,14 @@ def _process_face_swap(frame: Frame, source_face: List[Face], target_face: Face,
     swapped_region = swap_face(source_face[source_index], adjusted_target_face, cropped_frame) # Swaps the faces
     # Create a mask for blending with blurred edges
     mask = create_edge_blur_mask(swapped_region.shape, blur_amount=modules.globals.blur_amount) # Creates a mask with feathered edges
+
+    # Occluder: multiply in a landmark-based face-shape mask so the swap is
+    # confined to the face contour only (excludes hair, background, hands, etc.)
+    if modules.globals.use_occluder:
+        face_shape_mask = create_face_mask(adjusted_target_face, cropped_frame)
+        face_shape_mask = face_shape_mask.astype(np.float32) / 255.0
+        mask = mask * face_shape_mask
+
     # Blend the swapped region with the original cropped region
     blended_region = blend_with_mask(swapped_region, cropped_frame, mask) # Blends the swapped face onto the original face
     # Paste the swapped region back into the original frame
