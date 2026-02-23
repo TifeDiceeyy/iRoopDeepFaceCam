@@ -112,7 +112,8 @@ enhancer_skip_frames = 1    # Apply face enhancer every N frames (1=every, 2=eve
 blur_amount = 12    # Edge-blend blur for face swap mask (higher = softer edges)
 crop_padding = 0.2  # Padding fraction around face bbox when cropping for swap
 
-enhancer_fidelity = 0.5  # GFPGAN restoration strength: 0.0 = subtle, 1.0 = full
+enhancer_fidelity = 0.5   # GFPGAN internal restoration strength: 0.0 = subtle, 1.0 = full
+restorer_blend    = 100   # How much restored face blends over swapped face: 0=none, 100=full
 
 use_occluder = False  # Use landmark convex-hull mask to restrict swap to face shape only
 

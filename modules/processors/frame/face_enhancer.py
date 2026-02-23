@@ -51,13 +51,18 @@ def get_face_enhancer() -> Any:
 
 
 def enhance_face(temp_frame: Frame) -> Frame:
+    import numpy as np
+    original = temp_frame.copy()
     with THREAD_SEMAPHORE:
-        _, _, temp_frame = get_face_enhancer().enhance(
+        _, _, enhanced = get_face_enhancer().enhance(
             temp_frame,
             paste_back=True,
             weight=modules.globals.enhancer_fidelity
         )
-    return temp_frame
+    blend = modules.globals.restorer_blend / 100.0
+    if blend >= 1.0:
+        return enhanced
+    return cv2.addWeighted(enhanced, blend, original, 1.0 - blend, 0)
 
 
 def process_frame(source_face: Face, temp_frame: Frame) -> Frame:

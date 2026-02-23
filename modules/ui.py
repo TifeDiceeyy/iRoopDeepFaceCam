@@ -184,16 +184,22 @@ class LiveSwapWorker:
             if PYVIRTUALCAM_AVAILABLE and modules.globals.virtual_camera_out:
                 try:
                     h, w = processed_frame.shape[:2]
+                    target_fps = max(1, modules.globals.camera_fps)
                     if self._vcam is None or self._vcam.width != w or self._vcam.height != h:
                         if self._vcam is not None:
-                            self._vcam.close()
+                            try: self._vcam.close()
+                            except Exception: pass
                             self._vcam = None
-                        self._vcam = pyvirtualcam.Camera(width=w, height=h, fps=30, delay=0)
+                        self._vcam = pyvirtualcam.Camera(width=w, height=h, fps=target_fps)
                     rgb_frame = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2RGB)
                     self._vcam.send(rgb_frame)
-                    self._vcam.sleep_until_next_frame()
-                except Exception:
-                    pass
+                    # No sleep_until_next_frame — let the swap loop dictate pacing
+                except Exception as e:
+                    print(f"[VCam] error: {e}", flush=True)
+                    if self._vcam is not None:
+                        try: self._vcam.close()
+                        except Exception: pass
+                        self._vcam = None
             else:
                 if self._vcam is not None:
                     try:
@@ -1295,38 +1301,70 @@ def create_preview(parent: ctk.CTkToplevel) -> ctk.CTkToplevel:
                       variable=fb_amount_var_p, command=update_fb_amount_p,
                       width=75, height=24, font=("Arial", 12)).pack(side='left', padx=2, pady=3)
 
-    # --- Enhancer Row ---
-    enh_row = ctk.CTkFrame(switch_frame, fg_color="transparent")
-    enh_row.pack(fill='x', side='top')
+    # ── RESTORER section (VisomasterAI-style) ──────────────────
+    restorer_row = ctk.CTkFrame(switch_frame, fg_color="transparent",
+                                border_width=1, border_color="#444")
+    restorer_row.pack(fill='x', side='top', padx=6, pady=(4, 2))
 
-    ctk.CTkLabel(enh_row, text="Enhancer:", font=("Arial", 12)).pack(side='left', padx=(10, 2), pady=3)
+    ctk.CTkLabel(restorer_row, text="RESTORER", font=("Arial", 12, "bold")).pack(side='left', padx=(8, 4), pady=4)
+
     enh_enabled_var_p = ctk.BooleanVar(value=modules.globals.fp_ui.get('face_enhancer', False))
     def toggle_enh_p():
         val = enh_enabled_var_p.get()
         modules.globals.fp_ui['face_enhancer'] = val
         set_frame_processors_modules_from_ui(modules.globals.frame_processors)
-    ctk.CTkSwitch(enh_row, text='', variable=enh_enabled_var_p,
-                  cursor='hand2', command=toggle_enh_p, width=40).pack(side='left', padx=2, pady=3)
+    ctk.CTkSwitch(restorer_row, text='', variable=enh_enabled_var_p,
+                  cursor='hand2', command=toggle_enh_p, width=44).pack(side='left', padx=(0, 6), pady=4)
 
-    ctk.CTkLabel(enh_row, text="Strength:", font=("Arial", 12)).pack(side='left', padx=(8, 2), pady=3)
+    ctk.CTkLabel(restorer_row, text="GFPGAN-v1.4",
+                 font=("Arial", 11), text_color="#888").pack(side='left', padx=(0, 12), pady=4)
+
+    ctk.CTkLabel(restorer_row, text="Fidelity:", font=("Arial", 12)).pack(side='left', padx=(0, 2), pady=4)
     enh_fid_var_p = ctk.StringVar(value=str(modules.globals.enhancer_fidelity))
     def update_enh_fid_p(v): modules.globals.enhancer_fidelity = float(v)
-    ctk.CTkOptionMenu(enh_row,
+    ctk.CTkOptionMenu(restorer_row,
                       values=["0.0","0.05","0.1","0.15","0.2","0.25","0.3","0.35","0.4",
                                "0.45","0.5","0.55","0.6","0.65","0.7","0.75","0.8",
                                "0.85","0.9","0.95","1.0"],
                       variable=enh_fid_var_p, command=update_enh_fid_p,
-                      width=80, height=24, font=("Arial", 12)).pack(side='left', padx=2, pady=3)
+                      width=78, height=26, font=("Arial", 12)).pack(side='left', padx=(0, 8), pady=4)
 
-    ctk.CTkLabel(enh_row, text="Skip:", font=("Arial", 12)).pack(side='left', padx=(10, 2), pady=3)
+    ctk.CTkLabel(restorer_row, text="Blend:", font=("Arial", 12)).pack(side='left', padx=(0, 2), pady=4)
+    enh_blend_var_p = ctk.StringVar(value=str(modules.globals.restorer_blend))
+    def update_enh_blend_p(v): modules.globals.restorer_blend = int(v)
+    ctk.CTkOptionMenu(restorer_row,
+                      values=[str(x) for x in range(0, 105, 5)],
+                      variable=enh_blend_var_p, command=update_enh_blend_p,
+                      width=72, height=26, font=("Arial", 12)).pack(side='left', padx=(0, 8), pady=4)
+
+    ctk.CTkLabel(restorer_row, text="Send Every:", font=("Arial", 12)).pack(side='left', padx=(0, 2), pady=4)
     enh_skip_var_p = ctk.StringVar(value=str(modules.globals.enhancer_skip_frames))
     def update_enh_skip_p(v): modules.globals.enhancer_skip_frames = int(v)
-    ctk.CTkOptionMenu(enh_row,
+    ctk.CTkOptionMenu(restorer_row,
                       values=["1","2","3","4","5","6","8","10"],
                       variable=enh_skip_var_p, command=update_enh_skip_p,
-                      width=60, height=24, font=("Arial", 12)).pack(side='left', padx=2, pady=3)
-    ctk.CTkLabel(enh_row, text="(1=every frame, 2=every 2nd...)",
-                 font=("Arial", 10), text_color="grey").pack(side='left', padx=(4, 0), pady=3)
+                      width=56, height=26, font=("Arial", 12)).pack(side='left', padx=(0, 4), pady=4)
+    ctk.CTkLabel(restorer_row, text="frames",
+                 font=("Arial", 10), text_color="#888").pack(side='left', pady=4)
+
+    # ── SEND TO VIRTUAL CAMERA row ──────────────────────────────
+    vcam_row_p = ctk.CTkFrame(switch_frame, fg_color="transparent",
+                               border_width=1, border_color="#444")
+    vcam_row_p.pack(fill='x', side='top', padx=6, pady=(2, 4))
+
+    ctk.CTkLabel(vcam_row_p, text="SEND TO VIRTUAL CAMERA",
+                 font=("Arial", 12, "bold")).pack(side='left', padx=(8, 6), pady=4)
+
+    vcam_preview_var = ctk.BooleanVar(value=modules.globals.virtual_camera_out)
+    def toggle_vcam_p():
+        modules.globals.virtual_camera_out = vcam_preview_var.get()
+    ctk.CTkSwitch(vcam_row_p, text='', variable=vcam_preview_var,
+                  cursor='hand2', command=toggle_vcam_p, width=44).pack(side='left', padx=(0, 8), pady=4)
+
+    vcam_info_text = "OBS Virtual Camera OK" if PYVIRTUALCAM_AVAILABLE else "install pyvirtualcam"
+    vcam_info_color = "#4CAF50" if PYVIRTUALCAM_AVAILABLE else "#FF6B6B"
+    ctk.CTkLabel(vcam_row_p, text=vcam_info_text,
+                 font=("Arial", 11), text_color=vcam_info_color).pack(side='left', padx=(0, 4), pady=4)
 
     # Slider and Display Container
     preview_slider = ctk.CTkSlider(preview, from_=0, to=0, command=lambda frame_value: update_preview(frame_value))
