@@ -1241,25 +1241,37 @@ def create_preview(parent: ctk.CTkToplevel) -> ctk.CTkToplevel:
     ctrl_row.pack(fill='x', side='top')
 
     ctk.CTkLabel(ctrl_row, text="Blur:", font=("Arial", 12)).pack(side='left', padx=(10, 2), pady=3)
-    blur_amount_var_p = ctk.StringVar(value=str(modules.globals.blur_amount))
-    def update_blur_p(v): modules.globals.blur_amount = int(v)
-    ctk.CTkOptionMenu(ctrl_row, values=["0","2","4","6","8","10","12","16","20","24","28","32","40"],
-                      variable=blur_amount_var_p, command=update_blur_p,
-                      width=70, height=24, font=("Arial", 11)).pack(side='left', padx=2, pady=3)
+    blur_val_lbl_p = ctk.CTkLabel(ctrl_row, text=str(modules.globals.blur_amount), width=26, font=("Arial", 11), anchor='w')
+    blur_val_lbl_p.pack(side='left', padx=(0, 2), pady=3)
+    def on_blur_p(v):
+        val = int(round(float(v)))
+        modules.globals.blur_amount = val
+        blur_val_lbl_p.configure(text=str(val))
+    blur_slider_p = ctk.CTkSlider(ctrl_row, from_=0, to=40, number_of_steps=40, command=on_blur_p, width=110, height=18)
+    blur_slider_p.set(modules.globals.blur_amount)
+    blur_slider_p.pack(side='left', padx=(0, 6), pady=3)
 
-    ctk.CTkLabel(ctrl_row, text="Pad:", font=("Arial", 12)).pack(side='left', padx=(8, 2), pady=3)
-    crop_pad_var_p = ctk.StringVar(value=str(modules.globals.crop_padding))
-    def update_pad_p(v): modules.globals.crop_padding = float(v)
-    ctk.CTkOptionMenu(ctrl_row, values=["0.0","0.05","0.1","0.15","0.2","0.25","0.3","0.35","0.4","0.5"],
-                      variable=crop_pad_var_p, command=update_pad_p,
-                      width=70, height=24, font=("Arial", 11)).pack(side='left', padx=2, pady=3)
+    ctk.CTkLabel(ctrl_row, text="Pad:", font=("Arial", 12)).pack(side='left', padx=(6, 2), pady=3)
+    pad_val_lbl_p = ctk.CTkLabel(ctrl_row, text=f"{modules.globals.crop_padding:.2f}", width=30, font=("Arial", 11), anchor='w')
+    pad_val_lbl_p.pack(side='left', padx=(0, 2), pady=3)
+    def on_pad_p(v):
+        val = round(float(v) * 20) / 20
+        modules.globals.crop_padding = val
+        pad_val_lbl_p.configure(text=f"{val:.2f}")
+    pad_slider_p = ctk.CTkSlider(ctrl_row, from_=0.0, to=0.5, number_of_steps=10, command=on_pad_p, width=100, height=18)
+    pad_slider_p.set(modules.globals.crop_padding)
+    pad_slider_p.pack(side='left', padx=(0, 6), pady=3)
 
-    ctk.CTkLabel(ctrl_row, text="Forehead:", font=("Arial", 12)).pack(side='left', padx=(8, 2), pady=3)
-    forehead_var_p = ctk.StringVar(value=str(modules.globals.face_forehead_var))
-    def update_forehead_p(v): modules.globals.face_forehead_var = float(v)
-    ctk.CTkOptionMenu(ctrl_row, values=["0.0","0.05","0.1","0.15","0.2","0.25","0.3","0.4","0.5"],
-                      variable=forehead_var_p, command=update_forehead_p,
-                      width=70, height=24, font=("Arial", 11)).pack(side='left', padx=2, pady=3)
+    ctk.CTkLabel(ctrl_row, text="Forehead:", font=("Arial", 12)).pack(side='left', padx=(6, 2), pady=3)
+    fhd_val_lbl_p = ctk.CTkLabel(ctrl_row, text=f"{modules.globals.face_forehead_var:.2f}", width=30, font=("Arial", 11), anchor='w')
+    fhd_val_lbl_p.pack(side='left', padx=(0, 2), pady=3)
+    def on_forehead_p(v):
+        val = round(float(v) * 20) / 20
+        modules.globals.face_forehead_var = val
+        fhd_val_lbl_p.configure(text=f"{val:.2f}")
+    fhd_slider_p = ctk.CTkSlider(ctrl_row, from_=0.0, to=0.5, number_of_steps=10, command=on_forehead_p, width=90, height=18)
+    fhd_slider_p.set(modules.globals.face_forehead_var)
+    fhd_slider_p.pack(side='left', padx=(0, 6), pady=3)
 
     occluder_var_p = ctk.BooleanVar(value=modules.globals.use_occluder)
     def toggle_occluder_p():
@@ -1267,65 +1279,58 @@ def create_preview(parent: ctk.CTkToplevel) -> ctk.CTkToplevel:
     ctk.CTkSwitch(ctrl_row, text='Occluder', variable=occluder_var_p,
                   cursor='hand2', command=toggle_occluder_p).pack(side='left', padx=(8, 5), pady=3)
 
-    # --- Color Correction Row ---
+    # --- Color Correction Rows (split: color channels / tone) ---
     cc_row = ctk.CTkFrame(switch_frame, fg_color="transparent")
     cc_row.pack(fill='x', side='top')
+
+    # Sub-row 1: toggle + R, G, B sliders
+    cc_row1 = ctk.CTkFrame(cc_row, fg_color="transparent")
+    cc_row1.pack(fill='x', side='top')
 
     cc_enabled_var_p = ctk.BooleanVar(value=modules.globals.color_correction_enabled)
     def toggle_cc_p():
         modules.globals.color_correction_enabled = cc_enabled_var_p.get()
-    ctk.CTkSwitch(cc_row, text='Color Correct', variable=cc_enabled_var_p,
-                  cursor='hand2', command=toggle_cc_p).pack(side='left', padx=(10, 4), pady=3)
+    ctk.CTkSwitch(cc_row1, text='Color Correct', variable=cc_enabled_var_p,
+                  cursor='hand2', command=toggle_cc_p).pack(side='left', padx=(10, 6), pady=2)
 
-    ctk.CTkLabel(cc_row, text="R:", font=("Arial", 11)).pack(side='left', padx=(6, 1), pady=3)
-    cc_r_var_p = ctk.StringVar(value=str(modules.globals.color_r))
-    def update_cc_r_p(v): modules.globals.color_r = int(v)
-    ctk.CTkOptionMenu(cc_row, values=[str(x) for x in range(-100, 110, 10)],
-                      variable=cc_r_var_p, command=update_cc_r_p,
-                      width=65, height=22, font=("Arial", 11)).pack(side='left', padx=1, pady=3)
+    def _cc_int_slider(parent, label, init, attr):
+        ctk.CTkLabel(parent, text=label, font=("Arial", 11)).pack(side='left', padx=(4, 1), pady=2)
+        val_lbl = ctk.CTkLabel(parent, text=str(init), width=32, font=("Arial", 11), anchor='w')
+        val_lbl.pack(side='left', padx=(0, 1), pady=2)
+        def _cb(v, lbl=val_lbl, a=attr):
+            n = int(round(float(v)))
+            setattr(modules.globals, a, n)
+            lbl.configure(text=str(n))
+        sl = ctk.CTkSlider(parent, from_=-100, to=100, number_of_steps=200, command=_cb, width=100, height=18)
+        sl.set(init)
+        sl.pack(side='left', padx=(0, 4), pady=2)
 
-    ctk.CTkLabel(cc_row, text="G:", font=("Arial", 11)).pack(side='left', padx=(4, 1), pady=3)
-    cc_g_var_p = ctk.StringVar(value=str(modules.globals.color_g))
-    def update_cc_g_p(v): modules.globals.color_g = int(v)
-    ctk.CTkOptionMenu(cc_row, values=[str(x) for x in range(-100, 110, 10)],
-                      variable=cc_g_var_p, command=update_cc_g_p,
-                      width=65, height=22, font=("Arial", 11)).pack(side='left', padx=1, pady=3)
+    _cc_int_slider(cc_row1, "R:", modules.globals.color_r, 'color_r')
+    _cc_int_slider(cc_row1, "G:", modules.globals.color_g, 'color_g')
+    _cc_int_slider(cc_row1, "B:", modules.globals.color_b, 'color_b')
 
-    ctk.CTkLabel(cc_row, text="B:", font=("Arial", 11)).pack(side='left', padx=(4, 1), pady=3)
-    cc_b_var_p = ctk.StringVar(value=str(modules.globals.color_b))
-    def update_cc_b_p(v): modules.globals.color_b = int(v)
-    ctk.CTkOptionMenu(cc_row, values=[str(x) for x in range(-100, 110, 10)],
-                      variable=cc_b_var_p, command=update_cc_b_p,
-                      width=65, height=22, font=("Arial", 11)).pack(side='left', padx=1, pady=3)
+    # Sub-row 2: Bri, Con, Sat, Sharp sliders
+    cc_row2 = ctk.CTkFrame(cc_row, fg_color="transparent")
+    cc_row2.pack(fill='x', side='top')
 
-    _tone_vals_p = ["0.5","0.6","0.7","0.8","0.9","1.0","1.1","1.2","1.3","1.4","1.5","1.6","1.8","2.0"]
+    ctk.CTkLabel(cc_row2, text="Tone:", font=("Arial", 11), text_color="#888").pack(side='left', padx=(10, 6), pady=2)
 
-    ctk.CTkLabel(cc_row, text="Bri:", font=("Arial", 11)).pack(side='left', padx=(6, 1), pady=3)
-    cc_br_var_p = ctk.StringVar(value=str(modules.globals.color_brightness))
-    def update_cc_br_p(v): modules.globals.color_brightness = float(v)
-    ctk.CTkOptionMenu(cc_row, values=_tone_vals_p, variable=cc_br_var_p,
-                      command=update_cc_br_p, width=65, height=22, font=("Arial", 11)).pack(side='left', padx=1, pady=3)
+    def _cc_float_slider(parent, label, init, lo, hi, steps, attr):
+        ctk.CTkLabel(parent, text=label, font=("Arial", 11)).pack(side='left', padx=(4, 1), pady=2)
+        val_lbl = ctk.CTkLabel(parent, text=f"{init:.1f}", width=30, font=("Arial", 11), anchor='w')
+        val_lbl.pack(side='left', padx=(0, 1), pady=2)
+        def _cb(v, lbl=val_lbl, a=attr):
+            n = round(float(v), 2)
+            setattr(modules.globals, a, n)
+            lbl.configure(text=f"{n:.1f}")
+        sl = ctk.CTkSlider(parent, from_=lo, to=hi, number_of_steps=steps, command=_cb, width=100, height=18)
+        sl.set(init)
+        sl.pack(side='left', padx=(0, 4), pady=2)
 
-    ctk.CTkLabel(cc_row, text="Con:", font=("Arial", 11)).pack(side='left', padx=(4, 1), pady=3)
-    cc_co_var_p = ctk.StringVar(value=str(modules.globals.color_contrast))
-    def update_cc_co_p(v): modules.globals.color_contrast = float(v)
-    ctk.CTkOptionMenu(cc_row, values=_tone_vals_p, variable=cc_co_var_p,
-                      command=update_cc_co_p, width=65, height=22, font=("Arial", 11)).pack(side='left', padx=1, pady=3)
-
-    ctk.CTkLabel(cc_row, text="Sat:", font=("Arial", 11)).pack(side='left', padx=(4, 1), pady=3)
-    cc_sa_var_p = ctk.StringVar(value=str(modules.globals.color_saturation))
-    def update_cc_sa_p(v): modules.globals.color_saturation = float(v)
-    ctk.CTkOptionMenu(cc_row, values=["0.0","0.2","0.4","0.6","0.8","1.0","1.2","1.4","1.6","1.8","2.0"],
-                      variable=cc_sa_var_p, command=update_cc_sa_p,
-                      width=65, height=22, font=("Arial", 11)).pack(side='left', padx=1, pady=3)
-
-    ctk.CTkLabel(cc_row, text="Sharp:", font=("Arial", 11)).pack(side='left', padx=(4, 1), pady=3)
-    cc_sh_var_p = ctk.StringVar(value=str(modules.globals.color_sharpness))
-    def update_cc_sh_p(v): modules.globals.color_sharpness = float(v)
-    ctk.CTkOptionMenu(cc_row,
-                      values=["0.0","0.2","0.4","0.6","0.8","1.0","1.2","1.4","1.6","1.8","2.0","2.5","3.0"],
-                      variable=cc_sh_var_p, command=update_cc_sh_p,
-                      width=65, height=22, font=("Arial", 11)).pack(side='left', padx=1, pady=3)
+    _cc_float_slider(cc_row2, "Bri:", modules.globals.color_brightness, 0.5, 2.0, 15, 'color_brightness')
+    _cc_float_slider(cc_row2, "Con:", modules.globals.color_contrast,   0.5, 2.0, 15, 'color_contrast')
+    _cc_float_slider(cc_row2, "Sat:", modules.globals.color_saturation,  0.0, 2.0, 20, 'color_saturation')
+    _cc_float_slider(cc_row2, "Sharp:", modules.globals.color_sharpness, 0.0, 3.0, 30, 'color_sharpness')
 
     # --- Final Blend Row ---
     fb_row = ctk.CTkFrame(switch_frame, fg_color="transparent")
@@ -1339,11 +1344,15 @@ def create_preview(parent: ctk.CTkToplevel) -> ctk.CTkToplevel:
                   cursor='hand2', command=toggle_fb_p, width=40).pack(side='left', padx=2, pady=3)
 
     ctk.CTkLabel(fb_row, text="Swap %:", font=("Arial", 12)).pack(side='left', padx=(8, 2), pady=3)
-    fb_amount_var_p = ctk.StringVar(value=str(modules.globals.final_blend_amount))
-    def update_fb_amount_p(v): modules.globals.final_blend_amount = int(v)
-    ctk.CTkOptionMenu(fb_row, values=[str(x) for x in range(0, 105, 5)],
-                      variable=fb_amount_var_p, command=update_fb_amount_p,
-                      width=75, height=24, font=("Arial", 12)).pack(side='left', padx=2, pady=3)
+    fb_val_lbl_p = ctk.CTkLabel(fb_row, text=str(modules.globals.final_blend_amount), width=30, font=("Arial", 12), anchor='w')
+    fb_val_lbl_p.pack(side='left', padx=(0, 2), pady=3)
+    def on_fb_amount_p(v):
+        val = int(round(float(v)))
+        modules.globals.final_blend_amount = val
+        fb_val_lbl_p.configure(text=str(val))
+    fb_slider_p = ctk.CTkSlider(fb_row, from_=0, to=100, number_of_steps=20, command=on_fb_amount_p, width=140, height=20)
+    fb_slider_p.set(modules.globals.final_blend_amount)
+    fb_slider_p.pack(side='left', padx=(0, 4), pady=3)
 
     # ── RESTORER section (VisomasterAI-style) ──────────────────
     restorer_row = ctk.CTkFrame(switch_frame, fg_color="transparent",
@@ -1364,22 +1373,26 @@ def create_preview(parent: ctk.CTkToplevel) -> ctk.CTkToplevel:
                  font=("Arial", 11), text_color="#888").pack(side='left', padx=(0, 12), pady=4)
 
     ctk.CTkLabel(restorer_row, text="Fidelity:", font=("Arial", 12)).pack(side='left', padx=(0, 2), pady=4)
-    enh_fid_var_p = ctk.StringVar(value=str(modules.globals.enhancer_fidelity))
-    def update_enh_fid_p(v): modules.globals.enhancer_fidelity = float(v)
-    ctk.CTkOptionMenu(restorer_row,
-                      values=["0.0","0.05","0.1","0.15","0.2","0.25","0.3","0.35","0.4",
-                               "0.45","0.5","0.55","0.6","0.65","0.7","0.75","0.8",
-                               "0.85","0.9","0.95","1.0"],
-                      variable=enh_fid_var_p, command=update_enh_fid_p,
-                      width=78, height=26, font=("Arial", 12)).pack(side='left', padx=(0, 8), pady=4)
+    enh_fid_val_lbl_p = ctk.CTkLabel(restorer_row, text=f"{modules.globals.enhancer_fidelity:.2f}", width=32, font=("Arial", 11), anchor='w')
+    enh_fid_val_lbl_p.pack(side='left', padx=(0, 2), pady=4)
+    def on_enh_fid_p(v):
+        val = round(float(v) * 20) / 20
+        modules.globals.enhancer_fidelity = val
+        enh_fid_val_lbl_p.configure(text=f"{val:.2f}")
+    enh_fid_slider_p = ctk.CTkSlider(restorer_row, from_=0.0, to=1.0, number_of_steps=20, command=on_enh_fid_p, width=120, height=20)
+    enh_fid_slider_p.set(modules.globals.enhancer_fidelity)
+    enh_fid_slider_p.pack(side='left', padx=(0, 10), pady=4)
 
     ctk.CTkLabel(restorer_row, text="Blend:", font=("Arial", 12)).pack(side='left', padx=(0, 2), pady=4)
-    enh_blend_var_p = ctk.StringVar(value=str(modules.globals.restorer_blend))
-    def update_enh_blend_p(v): modules.globals.restorer_blend = int(v)
-    ctk.CTkOptionMenu(restorer_row,
-                      values=[str(x) for x in range(0, 105, 5)],
-                      variable=enh_blend_var_p, command=update_enh_blend_p,
-                      width=72, height=26, font=("Arial", 12)).pack(side='left', padx=(0, 8), pady=4)
+    enh_blend_val_lbl_p = ctk.CTkLabel(restorer_row, text=str(modules.globals.restorer_blend), width=30, font=("Arial", 11), anchor='w')
+    enh_blend_val_lbl_p.pack(side='left', padx=(0, 2), pady=4)
+    def on_enh_blend_p(v):
+        val = int(round(float(v)))
+        modules.globals.restorer_blend = val
+        enh_blend_val_lbl_p.configure(text=str(val))
+    enh_blend_slider_p = ctk.CTkSlider(restorer_row, from_=0, to=100, number_of_steps=20, command=on_enh_blend_p, width=120, height=20)
+    enh_blend_slider_p.set(modules.globals.restorer_blend)
+    enh_blend_slider_p.pack(side='left', padx=(0, 10), pady=4)
 
     ctk.CTkLabel(restorer_row, text="Send Every:", font=("Arial", 12)).pack(side='left', padx=(0, 2), pady=4)
     enh_skip_var_p = ctk.StringVar(value=str(modules.globals.enhancer_skip_frames))
