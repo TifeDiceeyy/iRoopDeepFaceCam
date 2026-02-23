@@ -260,8 +260,8 @@ def _get_source_index(i: int, source_face: List[Face], source_face_order: List[i
 def _process_face_swap(frame: Frame, source_face: List[Face], target_face: Face, source_index: int) -> Frame:
     """Performs face swapping and masking on a single face."""
     # Crop the face region
-    cropped_frame, crop_info = crop_face_region(frame, target_face) # Crops out the face region
-    
+    cropped_frame, crop_info = crop_face_region(frame, target_face, modules.globals.crop_padding) # Crops out the face region
+
     # --- FIX START: Check for empty crop to prevent crash ---
     if cropped_frame is None or cropped_frame.size == 0 or cropped_frame.shape[0] == 0 or cropped_frame.shape[1] == 0:
         return frame
@@ -272,7 +272,7 @@ def _process_face_swap(frame: Frame, source_face: List[Face], target_face: Face,
     # Perform face swapping on the cropped region
     swapped_region = swap_face(source_face[source_index], adjusted_target_face, cropped_frame) # Swaps the faces
     # Create a mask for blending with blurred edges
-    mask = create_edge_blur_mask(swapped_region.shape, blur_amount=BLUR_AMOUNT) # Creates a mask with feathered edges
+    mask = create_edge_blur_mask(swapped_region.shape, blur_amount=modules.globals.blur_amount) # Creates a mask with feathered edges
     # Blend the swapped region with the original cropped region
     blended_region = blend_with_mask(swapped_region, cropped_frame, mask) # Blends the swapped face onto the original face
     # Paste the swapped region back into the original frame

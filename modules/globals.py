@@ -106,3 +106,6 @@ mouth_mask_enabled_faces = [True] * 10 # Initialize 10 faces to True
 
 virtual_camera_out = False  # Whether to stream processed frames to a virtual camera
 swapper_resolution = 128    # Resolution for face swapper model: 128, 256, or 512
+
+blur_amount = 12    # Edge-blend blur for face swap mask (higher = softer edges)
+crop_padding = 0.2  # Padding fraction around face bbox when cropping for swap

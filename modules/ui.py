@@ -833,7 +833,34 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
                                              height=24, font=("Arial", 12))
     swapper_res_dropdown.place(relx=0.64, rely=0.87, relwidth=0.13)
 
-    button_y = 0.91  # Y position of the buttons
+    # --- Face Swap Parameters row ---
+    blur_label = ctk.CTkLabel(ui_container, text="Edge Blur:", font=("Arial", 12), anchor="e")
+    blur_label.place(relx=0.02, rely=0.896, relwidth=0.14)
+
+    blur_amount_var = ctk.StringVar(value=str(modules.globals.blur_amount))
+    def update_blur_amount(value):
+        modules.globals.blur_amount = int(value)
+    blur_dropdown = ctk.CTkOptionMenu(ui_container,
+                                      values=["0","2","4","6","8","10","12","16","20","24","28","32","40"],
+                                      variable=blur_amount_var,
+                                      command=update_blur_amount,
+                                      height=24, font=("Arial", 12))
+    blur_dropdown.place(relx=0.17, rely=0.896, relwidth=0.12)
+
+    pad_label = ctk.CTkLabel(ui_container, text="Crop Pad:", font=("Arial", 12), anchor="e")
+    pad_label.place(relx=0.33, rely=0.896, relwidth=0.14)
+
+    crop_padding_var = ctk.StringVar(value=str(modules.globals.crop_padding))
+    def update_crop_padding(value):
+        modules.globals.crop_padding = float(value)
+    pad_dropdown = ctk.CTkOptionMenu(ui_container,
+                                     values=["0.0","0.05","0.1","0.15","0.2","0.25","0.3","0.35","0.4","0.5"],
+                                     variable=crop_padding_var,
+                                     command=update_crop_padding,
+                                     height=24, font=("Arial", 12))
+    pad_dropdown.place(relx=0.48, rely=0.896, relwidth=0.12)
+
+    button_y = 0.93  # Y position of the camera row (shifted down to make room)
 
     # --- Camera Selection ---
     camera_label = ctk.CTkLabel(ui_container, text="Select Camera:")
@@ -874,7 +901,7 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
     
     # Status and donate labels
     status_label = ctk.CTkLabel(ui_container, text=None, justify='center')
-    status_label.place(relx=0.05, rely=0.95, relwidth=0.9)
+    status_label.place(relx=0.05, rely=0.97, relwidth=0.9)
 
     if not modules.globals.face_tracking:
         pseudo_face_switch.configure(state="disabled")
