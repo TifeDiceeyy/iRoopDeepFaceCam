@@ -103,3 +103,6 @@ detection_frequency = 1 # Default to 3 (Balanced speed/accuracy)
 
 mask_target_option = "Both" # Add this line
 mouth_mask_enabled_faces = [True] * 10 # Initialize 10 faces to True
+
+virtual_camera_out = False  # Whether to stream processed frames to a virtual camera
+swapper_resolution = 128    # Resolution for face swapper model: 128, 256, or 512

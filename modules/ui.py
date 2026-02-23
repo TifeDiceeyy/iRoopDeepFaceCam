@@ -18,6 +18,12 @@ from modules.utilities import is_image, is_video, resolve_relative_path, has_ima
 import numpy as np
 import time
 
+try:
+    import pyvirtualcam
+    PYVIRTUALCAM_AVAILABLE = True
+except ImportError:
+    PYVIRTUALCAM_AVAILABLE = False
+
 # Global reference to the worker so the dropdown can find it
 worker = None 
 
@@ -35,9 +41,12 @@ class LiveSwapWorker:
         self.change_res_flag = False
         self.new_width = 640
         self.new_height = 480
-        
+
         # Auto-Rotation Variables
         self.rotation_check_counter = 0
+
+        # Virtual Camera
+        self._vcam = None
 
     def start(self, camera_index):
         self.camera_index = camera_index
@@ -145,6 +154,34 @@ class LiveSwapWorker:
             with self.lock:
                 self.latest_frame = processed_frame
 
+            # Virtual Camera Output
+            if PYVIRTUALCAM_AVAILABLE and modules.globals.virtual_camera_out:
+                try:
+                    h, w = processed_frame.shape[:2]
+                    if self._vcam is None or self._vcam.width != w or self._vcam.height != h:
+                        if self._vcam is not None:
+                            self._vcam.close()
+                            self._vcam = None
+                        self._vcam = pyvirtualcam.Camera(width=w, height=h, fps=30, delay=0)
+                    rgb_frame = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2RGB)
+                    self._vcam.send(rgb_frame)
+                    self._vcam.sleep_until_next_frame()
+                except Exception:
+                    pass
+            else:
+                if self._vcam is not None:
+                    try:
+                        self._vcam.close()
+                    except Exception:
+                        pass
+                    self._vcam = None
+
+        if self._vcam is not None:
+            try:
+                self._vcam.close()
+            except Exception:
+                pass
+            self._vcam = None
         if self.camera:
             self.camera.release()
 
@@ -156,6 +193,12 @@ class LiveSwapWorker:
 
     def stop(self):
         self.stopped = True
+        if self._vcam is not None:
+            try:
+                self._vcam.close()
+            except Exception:
+                pass
+            self._vcam = None
         
 global camera
 camera = None
@@ -759,6 +802,36 @@ def create_root(start: Callable[[], None], destroy: Callable[[], None]) -> ctk.C
                                               command=update_preview_size,
                                               fg_color="green", button_color="dark green", button_hover_color="forest green")
     preview_size_dropdown.place(relx=space_between*5 + button_width*4, rely=button_y, relwidth=button_width, relheight=button_height)
+
+    # --- Virtual Camera & Swapper Resolution ---
+    vcam_label = ctk.CTkLabel(ui_container, text="Virtual Cam:", font=("Arial", 12), anchor="e")
+    vcam_label.place(relx=0.02, rely=0.87, relwidth=0.14)
+
+    virtual_cam_var = ctk.BooleanVar(value=modules.globals.virtual_camera_out)
+    def toggle_virtual_cam():
+        modules.globals.virtual_camera_out = virtual_cam_var.get()
+    vcam_switch = ctk.CTkSwitch(ui_container, text='', variable=virtual_cam_var,
+                                cursor='hand2', command=toggle_virtual_cam, width=40)
+    vcam_switch.place(relx=0.17, rely=0.87, relwidth=0.10)
+
+    vcam_status = ctk.CTkLabel(ui_container,
+                               text="" if PYVIRTUALCAM_AVAILABLE else "(install pyvirtualcam)",
+                               font=("Arial", 10), text_color="grey")
+    vcam_status.place(relx=0.28, rely=0.87, relwidth=0.18)
+
+    swapper_res_label = ctk.CTkLabel(ui_container, text="Swap Res:", font=("Arial", 12), anchor="e")
+    swapper_res_label.place(relx=0.49, rely=0.87, relwidth=0.14)
+
+    swapper_res_var = ctk.StringVar(value=str(modules.globals.swapper_resolution))
+    def update_swapper_res(value):
+        modules.globals.swapper_resolution = int(value)
+        from modules.processors.frame.face_swapper import reset_face_swapper
+        reset_face_swapper()
+    swapper_res_dropdown = ctk.CTkOptionMenu(ui_container, values=["128", "256", "512"],
+                                             variable=swapper_res_var,
+                                             command=update_swapper_res,
+                                             height=24, font=("Arial", 12))
+    swapper_res_dropdown.place(relx=0.64, rely=0.87, relwidth=0.13)
 
     button_y = 0.91  # Y position of the buttons
 

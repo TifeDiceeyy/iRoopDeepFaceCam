@@ -1,4 +1,5 @@
 from typing import Any, List, Optional, Tuple
+import os
 import cv2  # This is a library for working with images and videos
 import insightface  # This is a library for detecting and analyzing faces
 import threading  # This helps run parts of the program at the same time
@@ -102,16 +103,33 @@ def pre_start() -> bool:
 
 def get_face_swapper() -> Any:
     """
-    Gets the face swapper model.
+    Gets the face swapper model. Loads the model matching the selected swapper_resolution.
+    Falls back to inswapper_128_fp16.onnx if the requested resolution model is not found.
     """
-    global FACE_SWAPPER # Tells the program we are using the global FACE_SWAPPER variable
+    global FACE_SWAPPER
 
-    with THREAD_LOCK: # This makes sure only one part of the program changes FACE_SWAPPER at a time
-        if FACE_SWAPPER is None: # Checks if the face swapper hasn't been loaded yet
-            model_path = resolve_relative_path('../models/inswapper_128_fp16.onnx') # Gets the path to the face swapper model
-            # Loads the face swapper model
+    with THREAD_LOCK:
+        if FACE_SWAPPER is None:
+            resolution = getattr(modules.globals, 'swapper_resolution', 128)
+            # Try resolution-specific fp16 model first, then plain, then fall back to 128
+            candidates = [
+                resolve_relative_path(f'../models/inswapper_{resolution}_fp16.onnx'),
+                resolve_relative_path(f'../models/inswapper_{resolution}.onnx'),
+                resolve_relative_path('../models/inswapper_128_fp16.onnx'),
+            ]
+            model_path = next((p for p in candidates if os.path.isfile(p)), candidates[-1])
             FACE_SWAPPER = insightface.model_zoo.get_model(model_path, providers=modules.globals.execution_providers)
     return FACE_SWAPPER
+
+
+def reset_face_swapper() -> None:
+    """
+    Clears the cached face swapper so it will be reloaded on next use.
+    Call this when swapper_resolution changes.
+    """
+    global FACE_SWAPPER
+    with THREAD_LOCK:
+        FACE_SWAPPER = None
 
 def swap_face(source_face: Face, target_face: Face, temp_frame: Frame) -> Frame:
     """
